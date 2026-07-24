@@ -3,71 +3,132 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 100;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E62B49C32F730E6200779DB5 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6A3119B2F730BC400F16CD9 /* WidgetKit.framework */; };
+		E62B49C42F730E6200779DB5 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6A3119D2F730BC400F16CD9 /* SwiftUI.framework */; };
+		E62B49CF2F730E6300779DB5 /* NetTotalWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E6D293DE301007F800728795 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = E6D293DD301007F800728795 /* OrderedCollections */; };
+		E6D293E2301008B400728795 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = E6D293E1301008B400728795 /* OrderedCollections */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
-		E67E442B2F04B2C800FB038D /* PBXContainerItemProxy */ = {
+		E62B49CD2F730E6300779DB5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E67E44152F04B2C600FB038D /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = E67E441C2F04B2C600FB038D;
-			remoteInfo = Penny;
-		};
-		E67E44352F04B2C800FB038D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E67E44152F04B2C600FB038D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = E67E441C2F04B2C600FB038D;
-			remoteInfo = Penny;
+			remoteGlobalIDString = E62B49C12F730E6200779DB5;
+			remoteInfo = NetTotalWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		E62B49D42F730E6300779DB5 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = PlugIns;
+			files = (
+				E62B49CF2F730E6300779DB5 /* NetTotalWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+		};
+		E6870CD52F2CA42E00647D56 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = Frameworks;
+			files = (
+			);
+			name = "Embed Frameworks";
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NetTotalWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E67E441D2F04B2C600FB038D /* Penny.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Penny.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		E67E442A2F04B2C800FB038D /* PennyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PennyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		E67E44342F04B2C800FB038D /* PennyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PennyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E6A3119B2F730BC400F16CD9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		E6A3119D2F730BC400F16CD9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E62B49D02F730E6300779DB5 /* Exceptions for "NetTotalWidget" folder in "NetTotalWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */;
+		};
+		E62B4A3F2F736CCA00779DB5 /* Exceptions for "Penny" folder in "NetTotalWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"App Intent/AddTransactionIntent.swift",
+				"App Intent/BudgetIntent.swift",
+				"App Intent/CategoryIntent.swift",
+				"App Intent/FundIntent.swift",
+				"App Intent/NetTotalIntent.swift",
+				"App Intent/OpenEntityIntents.swift",
+				"App Intent/TransactionIntent.swift",
+				Classes/Account.swift,
+				Classes/Budget.swift,
+				Classes/Category.swift,
+				Classes/Database.swift,
+				Classes/Fund.swift,
+				Classes/Transaction.swift,
+				Helpers/AppRouter.swift,
+				Helpers/Enums.swift,
+				Helpers/Extensions.swift,
+				Helpers/Functions.swift,
+				Helpers/HomeStats.swift,
+				Helpers/Structs.swift,
+				"Settings/Category View/EditCategoryView.swift",
+				Settings/CategoryRulesView.swift,
+			);
+			target = E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */;
+		};
+		E6684B342FCD2F0D009267CA /* Exceptions for "Penny" folder in "Penny" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E67E441C2F04B2C600FB038D /* Penny */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		E62B49C52F730E6200779DB5 /* NetTotalWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E62B49D02F730E6300779DB5 /* Exceptions for "NetTotalWidget" folder in "NetTotalWidgetExtension" target */,
+			);
+			path = NetTotalWidget;
+			sourceTree = "<group>";
+		};
 		E67E441F2F04B2C600FB038D /* Penny */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E6684B342FCD2F0D009267CA /* Exceptions for "Penny" folder in "Penny" target */,
+				E62B4A3F2F736CCA00779DB5 /* Exceptions for "Penny" folder in "NetTotalWidgetExtension" target */,
+			);
 			path = Penny;
-			sourceTree = "<group>";
-		};
-		E67E442D2F04B2C800FB038D /* PennyTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PennyTests;
-			sourceTree = "<group>";
-		};
-		E67E44372F04B2C800FB038D /* PennyUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PennyUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		E62B49BF2F730E6200779DB5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				E62B49C42F730E6200779DB5 /* SwiftUI.framework in Frameworks */,
+				E62B49C32F730E6200779DB5 /* WidgetKit.framework in Frameworks */,
+				E6D293E2301008B400728795 /* OrderedCollections in Frameworks */,
+			);
+		};
 		E67E441A2F04B2C600FB038D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
+				E6D293DE301007F800728795 /* OrderedCollections in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E67E44272F04B2C800FB038D /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E67E44312F04B2C800FB038D /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -76,8 +137,8 @@
 			isa = PBXGroup;
 			children = (
 				E67E441F2F04B2C600FB038D /* Penny */,
-				E67E442D2F04B2C800FB038D /* PennyTests */,
-				E67E44372F04B2C800FB038D /* PennyUITests */,
+				E62B49C52F730E6200779DB5 /* NetTotalWidget */,
+				E6A3119A2F730BC400F16CD9 /* Frameworks */,
 				E67E441E2F04B2C600FB038D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -86,15 +147,44 @@
 			isa = PBXGroup;
 			children = (
 				E67E441D2F04B2C600FB038D /* Penny.app */,
-				E67E442A2F04B2C800FB038D /* PennyTests.xctest */,
-				E67E44342F04B2C800FB038D /* PennyUITests.xctest */,
+				E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		E6A3119A2F730BC400F16CD9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E6A3119B2F730BC400F16CD9 /* WidgetKit.framework */,
+				E6A3119D2F730BC400F16CD9 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E62B49D12F730E6300779DB5 /* Build configuration list for PBXNativeTarget "NetTotalWidgetExtension" */;
+			buildPhases = (
+				E62B49BE2F730E6200779DB5 /* Sources */,
+				E62B49BF2F730E6200779DB5 /* Frameworks */,
+				E62B49C02F730E6200779DB5 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				E62B49C52F730E6200779DB5 /* NetTotalWidget */,
+			);
+			name = NetTotalWidgetExtension;
+			packageProductDependencies = (
+				E6D293E1301008B400728795 /* OrderedCollections */,
+			);
+			productName = NetTotalWidgetExtension;
+			productReference = E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		E67E441C2F04B2C600FB038D /* Penny */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E67E443E2F04B2C800FB038D /* Build configuration list for PBXNativeTarget "Penny" */;
@@ -102,66 +192,24 @@
 				E67E44192F04B2C600FB038D /* Sources */,
 				E67E441A2F04B2C600FB038D /* Frameworks */,
 				E67E441B2F04B2C600FB038D /* Resources */,
+				E6870CD52F2CA42E00647D56 /* Embed Frameworks */,
+				E62B49D42F730E6300779DB5 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				E62B49CE2F730E6300779DB5 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E67E441F2F04B2C600FB038D /* Penny */,
 			);
 			name = Penny;
 			packageProductDependencies = (
+				E6D293DD301007F800728795 /* OrderedCollections */,
 			);
 			productName = Penny;
 			productReference = E67E441D2F04B2C600FB038D /* Penny.app */;
 			productType = "com.apple.product-type.application";
-		};
-		E67E44292F04B2C800FB038D /* PennyTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = E67E44412F04B2C800FB038D /* Build configuration list for PBXNativeTarget "PennyTests" */;
-			buildPhases = (
-				E67E44262F04B2C800FB038D /* Sources */,
-				E67E44272F04B2C800FB038D /* Frameworks */,
-				E67E44282F04B2C800FB038D /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				E67E442C2F04B2C800FB038D /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				E67E442D2F04B2C800FB038D /* PennyTests */,
-			);
-			name = PennyTests;
-			packageProductDependencies = (
-			);
-			productName = PennyTests;
-			productReference = E67E442A2F04B2C800FB038D /* PennyTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		E67E44332F04B2C800FB038D /* PennyUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = E67E44442F04B2C800FB038D /* Build configuration list for PBXNativeTarget "PennyUITests" */;
-			buildPhases = (
-				E67E44302F04B2C800FB038D /* Sources */,
-				E67E44312F04B2C800FB038D /* Frameworks */,
-				E67E44322F04B2C800FB038D /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				E67E44362F04B2C800FB038D /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				E67E44372F04B2C800FB038D /* PennyUITests */,
-			);
-			name = PennyUITests;
-			packageProductDependencies = (
-			);
-			productName = PennyUITests;
-			productReference = E67E44342F04B2C800FB038D /* PennyUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
@@ -170,19 +218,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 2620;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					E62B49C12F730E6200779DB5 = {
+						CreatedOnToolsVersion = 26.3;
+					};
 					E67E441C2F04B2C600FB038D = {
 						CreatedOnToolsVersion = 26.2;
-					};
-					E67E44292F04B2C800FB038D = {
-						CreatedOnToolsVersion = 26.2;
-						TestTargetID = E67E441C2F04B2C600FB038D;
-					};
-					E67E44332F04B2C800FB038D = {
-						CreatedOnToolsVersion = 26.2;
-						TestTargetID = E67E441C2F04B2C600FB038D;
 					};
 				};
 			};
@@ -195,81 +238,121 @@
 			);
 			mainGroup = E67E44142F04B2C600FB038D;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				E6D293DC301007F800728795 /* XCRemoteSwiftPackageReference "swift-collections" */,
+			);
+			preferredProjectObjectVersion = 100;
 			productRefGroup = E67E441E2F04B2C600FB038D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				E67E441C2F04B2C600FB038D /* Penny */,
-				E67E44292F04B2C800FB038D /* PennyTests */,
-				E67E44332F04B2C800FB038D /* PennyUITests */,
+				E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		E62B49C02F730E6200779DB5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
 		E67E441B2F04B2C600FB038D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E67E44282F04B2C800FB038D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E67E44322F04B2C800FB038D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		E62B49BE2F730E6200779DB5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 		E67E44192F04B2C600FB038D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E67E44262F04B2C800FB038D /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E67E44302F04B2C800FB038D /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		E67E442C2F04B2C800FB038D /* PBXTargetDependency */ = {
+		E62B49CE2F730E6300779DB5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = E67E441C2F04B2C600FB038D /* Penny */;
-			targetProxy = E67E442B2F04B2C800FB038D /* PBXContainerItemProxy */;
-		};
-		E67E44362F04B2C800FB038D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = E67E441C2F04B2C600FB038D /* Penny */;
-			targetProxy = E67E44352F04B2C800FB038D /* PBXContainerItemProxy */;
+			target = E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */;
+			targetProxy = E62B49CD2F730E6300779DB5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		E67E443C2F04B2C800FB038D /* Debug */ = {
+		E62B49D22F730E6300779DB5 /* Debug configuration for PBXNativeTarget "NetTotalWidgetExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = NetTotalWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NetTotalWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NetTotalWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ethanchristo.Penny.NetTotalWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E62B49D32F730E6300779DB5 /* Release configuration for PBXNativeTarget "NetTotalWidgetExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = NetTotalWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NetTotalWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NetTotalWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ethanchristo.Penny.NetTotalWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E67E443C2F04B2C800FB038D /* Debug configuration for PBXProject "Penny" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -303,7 +386,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 435K8A8ARN;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -325,12 +410,13 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
-		E67E443D2F04B2C800FB038D /* Release */ = {
+		E67E443D2F04B2C800FB038D /* Release configuration for PBXProject "Penny" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -364,7 +450,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 435K8A8ARN;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -379,21 +467,26 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
 		};
-		E67E443F2F04B2C800FB038D /* Debug */ = {
+		E67E443F2F04B2C800FB038D /* Debug configuration for PBXNativeTarget "Penny" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Penny/Penny.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Penny/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -402,19 +495,19 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Opal.Penny;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ethanchristo.Penny;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -425,17 +518,21 @@
 			};
 			name = Debug;
 		};
-		E67E44402F04B2C800FB038D /* Release */ = {
+		E67E44402F04B2C800FB038D /* Release configuration for PBXNativeTarget "Penny" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Penny/Penny.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Penny/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -444,123 +541,25 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Opal.Penny;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ethanchristo.Penny;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Release;
-		};
-		E67E44422F04B2C800FB038D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Opal.PennyTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Penny.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Penny";
-				XROS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Debug;
-		};
-		E67E44432F04B2C800FB038D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Opal.PennyTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Penny.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Penny";
-				XROS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Release;
-		};
-		E67E44452F04B2C800FB038D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Opal.PennyUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = Penny;
-				XROS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Debug;
-		};
-		E67E44462F04B2C800FB038D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Opal.PennyUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = Penny;
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Release;
@@ -568,43 +567,55 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		E62B49D12F730E6300779DB5 /* Build configuration list for PBXNativeTarget "NetTotalWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E62B49D22F730E6300779DB5 /* Debug configuration for PBXNativeTarget "NetTotalWidgetExtension" */,
+				E62B49D32F730E6300779DB5 /* Release configuration for PBXNativeTarget "NetTotalWidgetExtension" */,
+			);
+			defaultConfigurationName = Release;
+		};
 		E67E44182F04B2C600FB038D /* Build configuration list for PBXProject "Penny" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				E67E443C2F04B2C800FB038D /* Debug */,
-				E67E443D2F04B2C800FB038D /* Release */,
+				E67E443C2F04B2C800FB038D /* Debug configuration for PBXProject "Penny" */,
+				E67E443D2F04B2C800FB038D /* Release configuration for PBXProject "Penny" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		E67E443E2F04B2C800FB038D /* Build configuration list for PBXNativeTarget "Penny" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				E67E443F2F04B2C800FB038D /* Debug */,
-				E67E44402F04B2C800FB038D /* Release */,
+				E67E443F2F04B2C800FB038D /* Debug configuration for PBXNativeTarget "Penny" */,
+				E67E44402F04B2C800FB038D /* Release configuration for PBXNativeTarget "Penny" */,
 			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		E67E44412F04B2C800FB038D /* Build configuration list for PBXNativeTarget "PennyTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				E67E44422F04B2C800FB038D /* Debug */,
-				E67E44432F04B2C800FB038D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		E67E44442F04B2C800FB038D /* Build configuration list for PBXNativeTarget "PennyUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				E67E44452F04B2C800FB038D /* Debug */,
-				E67E44462F04B2C800FB038D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E6D293DC301007F800728795 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E6D293DD301007F800728795 /* OrderedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E6D293DC301007F800728795 /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = OrderedCollections;
+		};
+		E6D293E1301008B400728795 /* OrderedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E6D293DC301007F800728795 /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = OrderedCollections;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E67E44152F04B2C600FB038D /* Project object */;
 }
