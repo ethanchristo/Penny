@@ -2,7 +2,7 @@
 
 **Last updated: August 2, 2026**
 
-Penny ("the app") is a personal finance app developed by Ethan Christo ("we," "us," or "the developer"). This Privacy Policy explains what information the app handles, how it is used, and the choices available to you.
+Penny ("the app") is a personal finance app developed by Ethan Christo. This Privacy Policy explains what information the app handles, how it is used, and the choices available to you.
 
 **In short: Penny stores your financial data on your device. We do not operate any servers, we do not collect your data, and we cannot see your information.**
 
@@ -39,10 +39,6 @@ Penny can optionally connect to the following third-party services, only if you 
 
 ### SimpleFIN (optional)
 If you connect your bank or credit cards, Penny communicates directly with the [SimpleFIN Bridge](https://www.simplefin.org) service to retrieve your account balances and transactions. Your use of SimpleFIN is subject to SimpleFIN's own terms and privacy practices. Your SimpleFIN access credential is stored securely in your device's Keychain.
-
-### Google / Gmail (optional)
-If you set up Email Import, Penny reads transaction emails from a Gmail label using a Google Apps Script that **you** create and deploy under **your own** Google account. The email content is processed **on your device** to extract transaction details. Your use of Gmail and Google Apps Script is subject to [Google's Privacy Policy](https://policies.google.com/privacy).
-
 ### Apple Foundation Models (on-device)
 Penny uses Apple's on-device AI to categorize transactions and parse imported email text. This processing happens entirely on your device and is not sent to Apple or any other party.
 

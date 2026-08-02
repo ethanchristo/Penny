@@ -70,8 +70,10 @@ struct SimpleFINAccount: Decodable, Identifiable {
         transactions = try container.decodeIfPresent([SimpleFINTransaction].self, forKey: .transactions) ?? []
     }
 
-    /// Signed numeric balance, e.g. "-1234.56" -> -1234.56.
-    var balanceValue: Decimal { Decimal(string: balance) ?? 0 }
+    /// Signed numeric balance for the net total: the bank's *available* balance
+    /// (posted minus pending holds) when reported, falling back to the posted
+    /// balance. e.g. "-1234.56" -> -1234.56.
+    var balanceValue: Decimal { Decimal(string: availableBalance ?? balance) ?? 0 }
 
     /// "1234.56" + "USD" -> "$1,234.56". Falls back to the raw string for
     /// non-ISO currencies (SimpleFIN allows custom currencies as URLs).

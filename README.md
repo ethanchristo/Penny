@@ -46,10 +46,9 @@ Penny uses Apple's **on-device Foundation Models** to automatically categorize i
 
 ### 🔗 Data Import
 - **SimpleFIN** — securely sync transactions and balances from your bank and credit cards via the open [SimpleFIN Bridge](https://www.simplefin.org) service. (SimpleFIN is a separate third-party service, ~$1.50/month or $15/year.)
-- **Email Import** — a guided setup generates a Google Apps Script that reads transactions from a Gmail label you create, so purchase-confirmation emails become transactions automatically.
 - Duplicate detection keeps re-syncs clean.
 
-### 🗣️ Siri & Shortcuts
+### 📱 Shortcuts
 - "Log a transaction," "Add an expense," "Record income."
 - "What's my net total?" — answered right in Spotlight.
 - Open a specific budget, fund, or transaction by voice.

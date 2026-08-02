@@ -221,8 +221,8 @@ struct RecurringInsightsView: View {
                 transactions: displayedTransactions,
                 namespace: namespace,
                 hideRecent: true,
-                hideRecurrence: false,
-                hideUpcoming: true,
+                hideRecurrence: true,
+                hideUpcoming: false,
                 hideAllTx: true,
                 searchString: ""
             )

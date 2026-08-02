@@ -237,8 +237,10 @@ struct InsightsView: View {
             
             Divider()
             
-            Button("Hide Insights", systemImage: "eye.slash", role: .destructive) {
+            Button(role: .destructive) {
                 showInsights = false
+            } label: {
+                Label("Hide Insights", systemImage: "eye.slash")
             }
         } label: {
             Image(systemName: "ellipsis.circle")

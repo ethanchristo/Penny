@@ -227,36 +227,50 @@ struct TransactionFilteredView: View {
     @ViewBuilder
     private func recentSection(from sections: DisplaySections) -> some View {
         if !sections.recent.isEmpty {
-        HStack {
-            Text("Recent Transactions")
-            
-            Spacer()
-            
-            NavigationLink("View All") { TransactionView() }
-                .tint(.secondary)
-        }
-        .font(.headline)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 30)
-        .padding(.top, 20)
-        
-        ForEach(sections.recent) { transaction in
-            Button {
-                editingTransaction = transaction
-            } label: {
-                TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: false, grouping: grouping)
+            HStack {
+                Text("Recent Transactions")
+                
+                Spacer()
+                
+                NavigationLink("View All") { TransactionView() }
+                    .tint(.secondary)
             }
-            .matchedTransitionSource(id: transaction.id, in: namespace)
-            .contextMenu {
-                Button(role: .destructive) {
-                    deleteTransaction(transaction)
+            .font(.headline)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 30)
+            .padding(.top, 20)
+            
+            ForEach(sections.recent) { transaction in
+                Button {
+                    editingTransaction = transaction
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: false, grouping: grouping)
                 }
+                .matchedTransitionSource(id: transaction.id, in: namespace)
+                .contextMenu {
+                    Button(role: .destructive) {
+                        deleteTransaction(transaction)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+                .transition(.blurReplace)
             }
-            .transition(.blurReplace)
-        }
-        .padding(.horizontal)
+            .padding(.horizontal)
+        } else {
+            NavigationLink {
+                TransactionView()
+            } label: {
+                Label("All Transactions", systemImage: "receipt.fill")
+                    .font(.headline)
+                    .lineLimit(1)
+                    .tint(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(24)
+                    .frame(height: 72)
+                    .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
+            }
+            .padding(.horizontal, 24)
         }
     }
     
@@ -325,9 +339,9 @@ struct TransactionFilteredView: View {
                 Text("(\(sections.upcoming.count))")
                     .foregroundStyle(Color.secondary)
                 
-                Image(systemName: "chevron.up")
-                    .foregroundStyle(.secondary)
-                    .rotationEffect(.degrees(showUpcomingSection ? 180 : 0))
+//                Image(systemName: "chevron.up")
+//                    .foregroundStyle(.secondary)
+//                    .rotationEffect(.degrees(showUpcomingSection ? 180 : 0))
             }
             .font(.headline)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -335,24 +349,21 @@ struct TransactionFilteredView: View {
             .padding(.top, 20)
             .onTapGesture { showUpcomingSection.toggle() }
             
-            if showUpcomingSection {
-                ForEach(sections.upcoming) { transaction in
-                    Button {
-                        editingTransaction = transaction
-                    } label : {
-                        TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: true, grouping: grouping)
-                    }
-                    .matchedTransitionSource(id: transaction.id, in: namespace)
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            deleteTransaction(transaction)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
-                    .padding(.horizontal)
-                    .transition(.blurReplace)
+            ForEach(sections.upcoming) { transaction in
+                Button {
+                    editingTransaction = transaction
+                } label : {
+                    TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: true, grouping: grouping)
                 }
+                .matchedTransitionSource(id: transaction.id, in: namespace)
+                .contextMenu {
+                    Button(role: .destructive) {
+                        deleteTransaction(transaction)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+                .padding(.horizontal)
             }
         }
     }

@@ -105,6 +105,8 @@ func spendingChartPoints(
 
 struct SpendingView: View {
     @AppStorage("Home Time Range", store: .group) private var selectedTimeRange: HomeTimeRange = .monthly
+    @AppStorage("default_checking_name") private var defaultCheckingName: String = "Checking"
+
 
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
     @Query(sort: \Account.name) private var accounts: [Account]
@@ -213,6 +215,8 @@ struct SpendingView: View {
                         }
                         
                         Picker("Accounts", selection: $filterAccount) {
+                            Text(defaultCheckingName).tag(nil as Account?)
+
                             ForEach(accounts.filter { $0.accountType != .credit }) {
                                 Text($0.name).tag($0 as Account?)
                             }

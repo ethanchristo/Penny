@@ -9,6 +9,8 @@ import SwiftData
 import SwiftUI
 
 struct TransactionView: View {
+    @AppStorage("default_checking_name") private var defaultCheckingName: String = "Checking"
+
     @Environment(\.modelContext) var modelContext
     @Environment(AppRouter.self) private var router
     // 1. Fetch ALL data here
@@ -130,6 +132,8 @@ struct TransactionView: View {
                         }
                         
                         Picker("Accounts", selection: $filterAccount) {
+                            Text(defaultCheckingName).tag(nil as Account?)
+                            
                             ForEach(accounts.filter { $0.accountType != .credit }) {
                                 Text($0.name).tag($0 as Account?)
                             }

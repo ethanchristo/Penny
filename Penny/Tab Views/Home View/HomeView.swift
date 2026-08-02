@@ -119,56 +119,67 @@ struct HomeView: View {
                 .padding(.top)
                 .padding(.horizontal, 24)
                 
+                SquigglyLine(wavelength: 16, amplitude: 2)
+                    .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .frame(height: 12) // Height should accommodate the amplitude
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+                
                 HStack {
                     NavigationLink {
                         BudgetView()
                     } label: {
                         Label("Budgets", systemImage: "chart.bar.fill")
+                            .font(.headline)
                             .lineLimit(1)
                             .tint(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding()
-                            .glassEffect()
+                            .padding(24)
+                            .frame(height: 72)
+                            .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
                     }
                     
                     NavigationLink {
                         FundView()
                     } label: {
                         Label("Funds", systemImage: "rectangle.stack.fill")
+                            .font(.headline)
                             .lineLimit(1)
                             .tint(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding()
-                            .glassEffect()
+                            .padding(24)
+                            .frame(height: 72)
+                            .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
                     }
                     
                 }
-                .padding(.top, 8)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
                 .padding(.horizontal, 24)
-
-                SquigglyLine(wavelength: 16, amplitude: 2)
-                    .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .frame(height: 12) // Height should accommodate the amplitude
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-
-                if showInsights {
-                    InsightsView()
-                }
-
+                
                 TransactionFilteredView(
                     editingTransaction: $editingTransaction,
                     transactions: windowedTransactions,
                     namespace: namespace,
                     hideRecent: false,
                     hideRecurrence: true,
-                    hideUpcoming: false,
+                    hideUpcoming: true,
                     hideAllTx: true,
                     searchString: searchText,
                     filterAccount: filterAccount,
                     filterCategory: filterCategory,
                     filterIsIncome: filterIsIncome
                 )
+                
+                if showInsights {
+//                    SquigglyLine(wavelength: 16, amplitude: 2)
+//                        .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+//                        .frame(height: 12) // Height should accommodate the amplitude
+//                        .padding(.horizontal)
+//                        .padding(.top, 12)
+                    
+                    InsightsView()
+                }
             }
             .background {
                 LinearGradient(

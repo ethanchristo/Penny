@@ -723,6 +723,11 @@ struct ShowTransactionView: View {
     var body: some View {
         VStack {
             ZStack {
+                Text(title.name)
+                    .padding(6)
+                    .glassEffect()
+                    .offset(y: 50)
+                
                 Text(title.symbol)
                     .font(.largeTitle.bold())
                     .frame(width: 80, height: 80)
@@ -731,11 +736,6 @@ struct ShowTransactionView: View {
                             .fill(title.color.opacity(0.6).gradient)
                     )
                     .shadow(color: title.color, radius: 5)
-                
-                Text(title.name)
-                    .padding(6)
-                    .glassEffect()
-                    .offset(y: 50)
             }
             
             VStack {
