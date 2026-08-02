@@ -85,4 +85,4 @@ We may update this Privacy Policy from time to time. Changes will be reflected b
 If you have any questions about this Privacy Policy or the app's privacy practices, please contact:
 
 **Ethan Christo**
-Email: ethan.christo14@gmail.com
+Email: pennybudgetapp@gmail.com

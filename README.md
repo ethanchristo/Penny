@@ -100,7 +100,7 @@ See the full [Privacy Policy](PRIVACY.md).
 
 Need help or have a question?
 
-- **Email:** ethan.christo14@gmail.com
+- **Email:** pennybudgetapp@gmail.com
 - **Issues:** Please open an issue in this repository.
 
 ---
@@ -118,9 +118,3 @@ Need help or have a question?
 > enable **GitHub Pages** on this repository (Settings → Pages), which will publish these
 > Markdown files as a website you can link to in App Store Connect's **Privacy Policy URL**
 > and **Support URL** fields.
-
----
-
-## License
-
-Copyright © 2026 Ethan Christo. All rights reserved.
