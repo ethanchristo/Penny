@@ -462,7 +462,6 @@ struct EditTransactionView: View {
                             .padding(.vertical, 15)
                             .glassEffect(.regular.interactive())
                     }
-                    .sensoryFeedback(.impact(weight: .light), trigger: inputAmount)
                 }
                 if decimalPadType == .ATM {
                     Spacer()
@@ -478,7 +477,6 @@ struct EditTransactionView: View {
                             .padding(.vertical, 15)
                             .glassEffect(.regular.interactive())
                     }
-                    .sensoryFeedback(.impact(weight: .light), trigger: inputAmount)
                 }
                 
                 ForEach(["0", "delete.backward.fill"], id: \.self) { string in
@@ -499,7 +497,6 @@ struct EditTransactionView: View {
                         .padding(.vertical, 15)
                         .glassEffect(.regular.interactive())
                     }
-                    .sensoryFeedback(.impact(weight: .light), trigger: inputAmount)
                 }
             }
             .tint(.primary)
@@ -517,6 +514,9 @@ struct EditTransactionView: View {
                 draft.isIncome = false
             }
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: inputAmount)
+        .sensoryFeedback(.impact(weight: .light), trigger: draft.isIncome)
+
         .sheet(isPresented: $showNotesSheet) {
             NavigationStack {
                 Form {
@@ -723,11 +723,6 @@ struct ShowTransactionView: View {
     var body: some View {
         VStack {
             ZStack {
-                Text(title.name)
-                    .padding(6)
-                    .glassEffect()
-                    .offset(y: 50)
-                
                 Text(title.symbol)
                     .font(.largeTitle.bold())
                     .frame(width: 80, height: 80)
@@ -736,6 +731,11 @@ struct ShowTransactionView: View {
                             .fill(title.color.opacity(0.6).gradient)
                     )
                     .shadow(color: title.color, radius: 5)
+                
+                Text(title.name)
+                    .padding(6)
+                    .glassEffect()
+                    .offset(y: 50)
             }
             
             VStack {

@@ -29,6 +29,7 @@ struct SettingsView: View {
     @AppStorage("show_insights") private var showInsights: Bool = true
 
     @Environment(\.dismiss) var dismiss
+    @Environment(\.openURL) var openURL
     
     @State private var currency: [String] = ["US Dollar", "USD", "$"]
     @State private var yellowNumberSheet = false
@@ -140,15 +141,58 @@ struct SettingsView: View {
             }
             
             Section {
-                Text(
-                    """
-                    Created with love by Ethan Christo
+                Button("Report Bug", systemImage: "ladybug") {
+                    // 2. Set up your email, subject, and body
+                    let email = "pennybudgetapp@gmail.com"
+                    let subject = "Penny App Bug"
+                    let body = "Hi Ethan,\n\nI have a bug to report..."
+                    
+                    // 3. Encode the strings so spaces and special characters don't break the URL
+                    let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    
+                    // 4. Create the final mailto URL
+                    let urlString = "mailto:\(email)?subject=\(encodedSubject)&body=\(encodedBody)"
+                    
+                    // 5. Open the Mail app
+                    if let url = URL(string: urlString) {
+                        openURL(url)
+                    }
+                }
+                .foregroundStyle(.primary)
 
+                Button("Request Feature", systemImage: "envelope") {
+                    // 2. Set up your email, subject, and body
+                    let email = "pennybudgetapp@gmail.com"
+                    let subject = "Penny App Suggestion"
+                    let body = "Hi Ethan,\n\nI have some feedback about the app..."
+                    
+                    // 3. Encode the strings so spaces and special characters don't break the URL
+                    let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    
+                    // 4. Create the final mailto URL
+                    let urlString = "mailto:\(email)?subject=\(encodedSubject)&body=\(encodedBody)"
+                    
+                    // 5. Open the Mail app
+                    if let url = URL(string: urlString) {
+                        openURL(url)
+                    }
+                }
+                .foregroundStyle(.primary)
+            } header: {
+                Text("Other")
+            } footer: {
+                Text("""
+                    
+                    Created with love by Ethan Christo 💖
+                    
                     Version: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                    """
-                )
-                .foregroundStyle(.secondary)
-                .frame(alignment: .center)
+                    
+                """)
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .onAppear {

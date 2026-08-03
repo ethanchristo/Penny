@@ -120,7 +120,7 @@ struct InsightsView: View {
     @State private var isEditing = false
 
     private let columns = [
-        GridItem(.adaptive(minimum: 200), spacing: 10)
+        GridItem(.adaptive(minimum: 160), spacing: 10)
     ]
 
     /// Tiles that can currently be resolved to a live model (or are built-in).
@@ -237,10 +237,8 @@ struct InsightsView: View {
             
             Divider()
             
-            Button(role: .destructive) {
+            Button("Hide Insights", systemImage: "eye.slash", role: .destructive) {
                 showInsights = false
-            } label: {
-                Label("Hide Insights", systemImage: "eye.slash")
             }
         } label: {
             Image(systemName: "ellipsis.circle")
@@ -257,7 +255,7 @@ struct InsightsView: View {
                 navigableTile(for: tile)
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 24)
     }
 
     @available(iOS 27.0, *)
@@ -409,9 +407,9 @@ struct InsightsView: View {
         // item crashes SwiftUI's drag payload builder on lift.
         let isBuiltin: Bool = { if case .builtin = tile.kind { return true }; return false }()
         let symbol = isBuiltin ? (tile.isHidden ? "eye.fill" : "eye.slash.fill") : "minus"
-        let tint: Color = isBuiltin ? (tile.isHidden ? Color(.systemGreen) : .clear) : Color(.systemRed)
+//        let tint: Color = isBuiltin ? (tile.isHidden ? Color(.systemGreen) : .clear) : Color(.systemRed)
 
-        return Button(role: isBuiltin ? nil : .destructive) {
+        return Button {
             if isBuiltin {
                 toggleHidden(tile)
             } else {
@@ -421,7 +419,7 @@ struct InsightsView: View {
             Image(systemName: symbol)
         }
         .padding(isBuiltin ? 6 : 10)
-        .glassEffect(.regular.tint(tint), in: Circle())
+        .glassEffect(in: Circle())
         .font(.caption.bold())
         .tint(.primary)
         .offset(x: -6, y: -6)

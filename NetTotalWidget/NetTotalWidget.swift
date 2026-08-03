@@ -85,6 +85,8 @@ struct PennyWidgetEntryView : View {
             
             Text(amountTruncation(for: entry.netTotal, currencySymbol: currencySymbol))
                 .font(.largeTitle.bold())
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .foregroundStyle(background.mix(with: displayTotalColor, by: 0.6))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

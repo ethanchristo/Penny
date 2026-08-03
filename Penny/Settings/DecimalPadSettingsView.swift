@@ -103,6 +103,7 @@ struct DecimalPadSettingsView: View {
                 }
             }
             .padding(.horizontal, 10)
+            .sensoryFeedback(.impact(weight: .light), trigger: amount)
         }
         .foregroundStyle(.primary)
         .navigationTitle("Decimal Pad Type")

@@ -119,12 +119,6 @@ struct HomeView: View {
                 .padding(.top)
                 .padding(.horizontal, 24)
                 
-                SquigglyLine(wavelength: 16, amplitude: 2)
-                    .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .frame(height: 12) // Height should accommodate the amplitude
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-                
                 HStack {
                     NavigationLink {
                         BudgetView()
@@ -153,7 +147,7 @@ struct HomeView: View {
                     }
                     
                 }
-                .padding(.top, 12)
+                .padding(.top, 20)
                 .padding(.bottom, 8)
                 .padding(.horizontal, 24)
                 
@@ -172,11 +166,11 @@ struct HomeView: View {
                 )
                 
                 if showInsights {
-//                    SquigglyLine(wavelength: 16, amplitude: 2)
-//                        .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-//                        .frame(height: 12) // Height should accommodate the amplitude
-//                        .padding(.horizontal)
-//                        .padding(.top, 12)
+                    SquigglyLine(wavelength: 16, amplitude: 2)
+                        .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .frame(height: 12) // Height should accommodate the amplitude
+                        .padding(.horizontal)
+                        .padding(.top, 12)
                     
                     InsightsView()
                 }

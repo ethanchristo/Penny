@@ -477,7 +477,7 @@ private struct RecurringCalendarChart: View {
 
     private var dayGrid: some View {
         LazyVGrid(columns: dayColumns, spacing: 6) {
-            ForEach(weekdaySymbols, id: \.self) { symbol in
+            ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                 Text(symbol)
                     .font(.caption2.bold())
                     .foregroundStyle(.secondary)
