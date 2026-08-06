@@ -6,6 +6,10 @@
 	<string>development</string>
 	<key>com.apple.developer.aps-environment</key>
 	<string>development</string>
+	<key>com.apple.developer.financekit</key>
+	<array>
+		<string>financial-data</string>
+	</array>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
 		<string>iCloud.com.ethanchristo.Penny</string>

@@ -441,10 +441,12 @@ nonisolated func creditCardOwed(for card: Account, transactions: [Transaction]) 
     // connect time, not a real statement charge, and is dated at connect. Left in,
     // it can land inside the statement window and inflate the amount due by nearly
     // the whole starting balance — so exclude it from the statement calc. (The id
-    // prefix mirrors `SimpleFINImporter.openingBalanceID`.) It stays in `total`,
-    // since it is genuinely part of the outstanding balance.
+    // prefix mirrors `SimpleFINImporter`/`FinanceKitImporter.openingBalanceID`.) It
+    // stays in `total`, since it is genuinely part of the outstanding balance.
     let statementTxns = cardTransactions.filter {
-        !($0.externalID?.hasPrefix("simplefin-opening-balance-") ?? false)
+        guard let externalID = $0.externalID else { return true }
+        return !externalID.hasPrefix("simplefin-opening-balance-")
+            && !externalID.hasPrefix("financekit-opening-balance-")
     }
 
     // `calculateTotal` returns income − expense, so spending is negative; flip the
@@ -482,11 +484,15 @@ nonisolated func netTotalAggregate(for transactions: [Transaction], funds: [Fund
     let mode = CreditCardBalanceType(rawValue: defaults.string(forKey: "net_total_credit_mode") ?? "") ?? .balance
     let includeUpcoming = defaults.object(forKey: "net_total_include_upcoming") as? Bool ?? true
     let includeSavings = defaults.object(forKey: "savings_total") as? Bool ?? false
-    // Read the SimpleFIN balances straight from the App Group (keys mirror
-    // `SimpleFINConfig`) so this stays usable from the widget target, which doesn't
-    // link the SimpleFIN client.
-    let balances = defaults.dictionary(forKey: "simplefin_account_balances") as? [String: Double] ?? [:]
+    // Read the bank-sync live balances straight from the App Group (keys mirror
+    // `SimpleFINConfig` / `FinanceKitConfig`) so this stays usable from the widget
+    // target, which links neither client. FinanceKit ids are namespaced
+    // (`financekit-…`), so the two dictionaries merge without key collisions.
+    var balances = defaults.dictionary(forKey: "simplefin_account_balances") as? [String: Double] ?? [:]
+    balances.merge(defaults.dictionary(forKey: "financekit_account_balances") as? [String: Double] ?? [:]) { _, new in new }
+    // Whichever source designated the primary checking (only one can, in practice).
     let checkingID = defaults.string(forKey: "simplefin_checking_id")
+        ?? defaults.string(forKey: "financekit_checking_id")
 
     let now = Date().endOfDay
 
@@ -501,8 +507,9 @@ nonisolated func netTotalAggregate(for transactions: [Transaction], funds: [Fund
     let checkingTxns = nonCreditTxns.filter { $0.account == nil }
     if let checkingID, let balance = balances[checkingID] {
         // Add back fund spending already baked into the live balance so it isn't
-        // double-counted against the fund reserve below.
-        assets += balance + fundUseTotal(in: checkingTxns)
+        // double-counted against the fund reserve below. `abs` guards against a
+        // source reporting a signed balance (e.g. Apple Card comes through negative).
+        assets += abs(balance) + fundUseTotal(in: checkingTxns)
     } else {
         assets += calculateTotal(for: checkingTxns, start: .distantPast, end: now)
     }
@@ -514,7 +521,7 @@ nonisolated func netTotalAggregate(for transactions: [Transaction], funds: [Fund
         if account.accountType == .savings, !includeSavings { continue }
         let accountTxns = nonCreditTxns.filter { $0.account == account }
         if let externalID = account.externalID, let balance = balances[externalID] {
-            assets += balance + fundUseTotal(in: accountTxns)
+            assets += abs(balance) + fundUseTotal(in: accountTxns)
         } else {
             assets += calculateTotal(for: accountTxns, start: .distantPast, end: now)
         }
@@ -531,7 +538,9 @@ nonisolated func netTotalAggregate(for transactions: [Transaction], funds: [Fund
                 // Fund spending charged to this card is already in its live balance;
                 // remove it here so the reserve doesn't count it a second time.
                 let cardTxns = creditTxns.filter { $0.account == card }
-                creditOwed += balance - fundUseTotal(in: cardTxns)
+                // Use the positive magnitude of what's owed regardless of the
+                // source's sign convention (Apple Card reports a negative balance).
+                creditOwed += abs(balance) - fundUseTotal(in: cardTxns)
             } else {
                 creditOwed += creditCardOwed(for: card, transactions: creditTxns).total
             }
@@ -745,7 +754,7 @@ func creditCardStatement(for card: Account) -> CreditCardBalances? {
 
 /// The date in `base`'s month whose day-of-month is `day`, clamped to the number
 /// of days in that month (so e.g. day 31 lands on Feb 28). Normalized to midnight.
-private func dateForDay(_ day: Int, inMonthOf base: Date, calendar: Calendar) -> Date {
+nonisolated private func dateForDay(_ day: Int, inMonthOf base: Date, calendar: Calendar) -> Date {
     let range = calendar.range(of: .day, in: .month, for: base) ?? 1..<29
     let clamped = min(max(day, 1), range.upperBound - 1)
     var components = calendar.dateComponents([.year, .month], from: base)
@@ -754,7 +763,7 @@ private func dateForDay(_ day: Int, inMonthOf base: Date, calendar: Calendar) ->
 }
 
 /// The most recent date whose day-of-month is `day`, occurring on or before `reference`.
-private func mostRecentDayOfMonth(_ day: Int, onOrBefore reference: Date, calendar: Calendar) -> Date {
+nonisolated private func mostRecentDayOfMonth(_ day: Int, onOrBefore reference: Date, calendar: Calendar) -> Date {
     let thisMonth = dateForDay(day, inMonthOf: reference, calendar: calendar)
     if thisMonth <= reference { return thisMonth }
 

@@ -25,6 +25,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		E60F361F3023892600C0DB5C /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolder = Product;
+			files = (
+			);
+			name = "Embed ExtensionKit Extensions";
+		};
 		E62B49D42F730E6300779DB5 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			dstPath = "";
@@ -76,6 +84,7 @@
 				Classes/Fund.swift,
 				Classes/Transaction.swift,
 				Helpers/AppRouter.swift,
+				Helpers/ColorHex.swift,
 				Helpers/Enums.swift,
 				Helpers/Extensions.swift,
 				Helpers/Functions.swift,
@@ -96,6 +105,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		E60F36173023892600C0DB5C /* PennyFinanceMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PennyFinanceMonitor;
+			sourceTree = "<group>";
+		};
 		E62B49C52F730E6200779DB5 /* NetTotalWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -138,6 +152,7 @@
 			children = (
 				E67E441F2F04B2C600FB038D /* Penny */,
 				E62B49C52F730E6200779DB5 /* NetTotalWidget */,
+				E60F36173023892600C0DB5C /* PennyFinanceMonitor */,
 				E6A3119A2F730BC400F16CD9 /* Frameworks */,
 				E67E441E2F04B2C600FB038D /* Products */,
 			);
@@ -194,6 +209,7 @@
 				E67E441B2F04B2C600FB038D /* Resources */,
 				E6870CD52F2CA42E00647D56 /* Embed Frameworks */,
 				E62B49D42F730E6300779DB5 /* Embed Foundation Extensions */,
+				E60F361F3023892600C0DB5C /* Embed ExtensionKit Extensions */,
 			);
 			buildRules = (
 			);
@@ -218,7 +234,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2630;
+				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					E62B49C12F730E6200779DB5 = {
@@ -487,6 +503,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Penny/Info.plist;
+				INFOPLIST_KEY_NSFinancialDataUsageDescription = "Penny reads your Apple Wallet account balances and transactions so it can track your spending and net total.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -533,6 +550,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Penny/Info.plist;
+				INFOPLIST_KEY_NSFinancialDataUsageDescription = "Penny reads your Apple Wallet account balances and transactions so it can track your spending and net total.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

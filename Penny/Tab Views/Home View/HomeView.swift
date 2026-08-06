@@ -264,6 +264,7 @@ struct HomeView: View {
                 await silentAutoFetch()
             }
             await silentSimpleFINSync()
+            await silentFinanceKitSync()
         }
         .sheet(isPresented: $showAddTransaction) {
             NavigationStack {
@@ -293,8 +294,12 @@ struct HomeView: View {
         var hasher = Hasher()
         hasher.combine(includeUpcoming)
         hasher.combine(creditMode)
-        // Refire when a SimpleFIN sync writes new live balances (they feed the total).
+        // Refire when a SimpleFIN or FinanceKit sync writes new live balances (they feed the total).
         for (id, balance) in SimpleFINConfig.accountBalances.sorted(by: { $0.key < $1.key }) {
+            hasher.combine(id)
+            hasher.combine(balance)
+        }
+        for (id, balance) in FinanceKitConfig.accountBalances.sorted(by: { $0.key < $1.key }) {
             hasher.combine(id)
             hasher.combine(balance)
         }
@@ -370,6 +375,27 @@ struct HomeView: View {
             SimpleFINConfig.lastSyncDate = .now
         } catch {
             // Silent failure on background sync — a failed fetch doesn't mean a dead connection.
+        }
+    }
+
+    /// FinanceKit sync on foreground: pulls new Wallet transactions since each
+    /// mapped account's cutoff and imports them (dedup + categorisation handled by
+    /// `FinanceKitImporter`). On-device data, so — unlike SimpleFIN — there's no API
+    /// limit to throttle against; it runs on every open. No-ops if not connected.
+    private func silentFinanceKitSync() async {
+        guard FinanceKitConfig.isConfigured else { return }
+
+        let floor = FinanceKitConfig.accountCutoffs.values.min()
+            ?? FinanceKitConfig.connectedDate
+
+        do {
+            let accounts = try await FinanceKitClient.fetchAccounts(since: floor)
+            await FinanceKitImporter.importNewTransactions(accounts,
+                                                           into: modelContext,
+                                                           categorize: financeKitHybridCategorize)
+            FinanceKitConfig.lastSyncDate = .now
+        } catch {
+            // Silent failure on foreground sync.
         }
     }
 

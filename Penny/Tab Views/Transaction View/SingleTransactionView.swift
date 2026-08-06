@@ -118,8 +118,6 @@ struct SingleTransactionView: View {
             editMode = initialEditMode
             loadTransaction()
         }
-        .navigationTitle(title)
-        .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Dismiss", systemImage: "xmark") {
@@ -271,18 +269,18 @@ struct EditTransactionView: View {
     
     var body: some View {
         VStack {
-            Picker("", selection: $draft.isIncome) {
-                if draft.fund?.preAllocate != true {
-                    Label(incomeName, systemImage: "tray.and.arrow.down").tag(true)
-                }
-                
-                Label(expenseName, systemImage: "tray.and.arrow.up").tag(false)
-            }
-            .pickerStyle(.palette)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 10)
-            .padding(.horizontal, 20)
-            
+//            Picker("", selection: $draft.isIncome) {
+//                if draft.fund?.preAllocate != true {
+//                    Label(incomeName, systemImage: "tray.and.arrow.down").tag(true)
+//                }
+//                
+//                Label(expenseName, systemImage: "tray.and.arrow.up").tag(false)
+//            }
+//            .pickerStyle(.palette)
+//            .frame(maxWidth: .infinity)
+//            .padding(.top, 10)
+//            .padding(.horizontal, 20)
+//            
             Spacer()
             
             HStack(alignment: .firstTextBaseline, spacing: 2) {
@@ -310,25 +308,157 @@ struct EditTransactionView: View {
             
             Spacer()
             
-            HStack {
+//            HStack {
+//                Button {
+//                    showDateSheet = true
+//                } label: {
+//                    Text(draft.date, format: .dateTime.month(.abbreviated).day().year())
+//                        .padding(8)
+//                        .glassEffect(.regular)
+//                }
+//                
+//                Button {
+//                    showRecurringSheet = true
+//                } label: {
+//                    Image(systemName: "arrow.trianglehead.2.clockwise")
+//                        .padding(8)
+//                        .glassEffect(.regular, in: .circle)
+//                }
+//                .disabled(draft.fund != nil)
+//                
+//                Spacer()
+//                
+//                Menu {
+//                    Button {
+//                        addAccount = true
+//                    } label: {
+//                        Label("Add Card/Account", systemImage: "plus")
+//                    }
+//                    
+//                    Divider()
+//                    
+//                    Picker("Accounts", selection: $draft.account) {
+//                        ForEach(accounts.filter { $0.accountType != .credit }) { account in
+//                            Text(account.name).tag(account as Account?)
+//                        }
+//                        
+//                        Text(defaultCheckingName).tag(nil as Account?)
+//                    }
+//                    .labelsVisibility(.visible)
+//                    
+//                    Divider()
+//                    
+//                    Picker("Credit Cards", selection: $draft.account) {
+//                        ForEach(accounts.filter { $0.accountType == .credit }) { card in
+//                            Text(card.name).tag(card as Account?)
+//                        }
+//                    }
+//                    .labelsVisibility(.visible)
+//                } label: {
+//                    Group {
+//                        if let account = draft.account, account.accountType == .credit {
+//                            HStack {
+//                                Image(systemName: "creditcard")
+//                                Text(account.name)
+//                            }
+//                        }
+//                        
+//                        if let account = draft.account, account.accountType == .savings {
+//                            HStack {
+//                                Image(systemName: "s.square")
+//                                Text(account.name)
+//                            }
+//                        }
+//                        
+//                        if let account = draft.account, account.accountType == .checking {
+//                            Text(account.name)
+//                        }
+//                        
+//                        if draft.account == nil {
+//                            Text(defaultCheckingName)
+//                        }
+//                    }
+//                    .padding(8)
+//                    .glassEffect(.regular, in: .capsule)
+//                }
+//                Menu {
+//                    Menu {
+//                        Button {
+//                            addCategory = true
+//                            
+//                        } label: {
+//                            Label("Add Category", systemImage: "plus")
+//                        }
+//                        
+//                        Divider()
+//
+//                        
+//                        Picker("Category", selection: $draft.category) {
+//                            ForEach(categories) { category in
+//                                Text("\(category.symbol)  \(category.name)").tag(category as Category?)
+//                            }
+//                        }
+//                    } label: {
+//                        Label("Category", systemImage: "rectangle.grid.2x2.fill")
+//                        if let cat = draft.category {
+//                            Text(cat.name)
+//                                .font(.caption)
+//                        }
+//                    }
+//                    
+//                    Menu {
+//                        Button {
+//                            addFund = true
+//                        } label: {
+//                            Label("Add Fund", systemImage: "plus")
+//                        }
+//                        
+//                        Divider()
+//                        
+//                        Picker("Fund", selection: $draft.fund) {
+//                            ForEach(funds) { fund in
+//                                Text("\(fund.symbol)  \(fund.name)").tag(fund)
+//                            }
+//                        }
+//                    } label: {
+//                        Label("Fund", systemImage: "rectangle.stack.fill")
+//                        if let fund = draft.fund {
+//                            Text(fund.name)
+//                                .font(.caption)
+//                        }
+//                    }
+//                } label: {
+//                    Group {
+//                        if let category = draft.category {
+//                            Text(category.symbol)
+//                                .padding(9)
+//                                .glassEffect(.regular.tint(category.color.opacity(0.5)))
+//                        } else if let fund = draft.fund {
+//                            Text(fund.symbol)
+//                                .padding(9)
+//                                .glassEffect(.regular.tint(fund.color.opacity(0.5)))
+//                        } else {
+//                            Text("Category/Fund")
+//                                .padding(8)
+//                                .glassEffect()
+//                        }
+//                    }
+//                }
+//            }
+//            .padding(.horizontal, 10)
+
+            LazyVGrid(columns: Array(repeating: GridItem(), count: 3)) {
                 Button {
                     showDateSheet = true
                 } label: {
                     Text(draft.date, format: .dateTime.month(.abbreviated).day().year())
-                        .padding(8)
-                        .glassEffect(.regular)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 15)
+                        .glassEffect(.regular.interactive())
                 }
-                
-                Button {
-                    showRecurringSheet = true
-                } label: {
-                    Image(systemName: "arrow.trianglehead.2.clockwise")
-                        .padding(8)
-                        .glassEffect(.regular, in: .circle)
-                }
-                .disabled(draft.fund != nil)
-                
-                Spacer()
                 
                 Menu {
                     Button {
@@ -380,9 +510,15 @@ struct EditTransactionView: View {
                             Text(defaultCheckingName)
                         }
                     }
-                    .padding(8)
-                    .glassEffect(.regular, in: .capsule)
+                    .font(.headline)
+//                    .lineLimit(1)
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 15)
+                    .glassEffect(.regular.interactive())
                 }
+                
                 Menu {
                     Menu {
                         Button {
@@ -433,23 +569,23 @@ struct EditTransactionView: View {
                     Group {
                         if let category = draft.category {
                             Text(category.symbol)
-                                .padding(9)
-                                .glassEffect(.regular.tint(category.color.opacity(0.5)))
+                                
                         } else if let fund = draft.fund {
                             Text(fund.symbol)
-                                .padding(9)
-                                .glassEffect(.regular.tint(fund.color.opacity(0.5)))
+                                
                         } else {
                             Text("Category/Fund")
-                                .padding(8)
-                                .glassEffect()
+                                
                         }
                     }
+                    .font(.title.bold())
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 15)
+                    .glassEffect(.regular.interactive())
                 }
-            }
-            .padding(.horizontal, 10)
-
-            LazyVGrid(columns: Array(repeating: GridItem(), count: 3)) {
+            
                 ForEach(1...9, id: \.self) { index in
                     Button {
                         handleInput(for: String(index))
@@ -516,7 +652,19 @@ struct EditTransactionView: View {
         }
         .sensoryFeedback(.impact(weight: .light), trigger: inputAmount)
         .sensoryFeedback(.impact(weight: .light), trigger: draft.isIncome)
-
+        .toolbar {
+            ToolbarItem {
+                Picker("Type", selection: $draft.isIncome) {
+                    if draft.fund?.preAllocate != true {
+                        Text(incomeName).tag(true)
+                    }
+                    
+                    Text(expenseName).tag(false)
+                }
+                .pickerStyle(.segmented)
+            }
+            .sharedBackgroundVisibility(.hidden)
+        }
         .sheet(isPresented: $showNotesSheet) {
             NavigationStack {
                 Form {

@@ -23,13 +23,13 @@ struct ImportTransactionsView: View {
             }
             
             Section {
-                Button {
-                    
+                NavigationLink {
+                    FinanceKitSetupView()
                 } label: {
                     Label("Finance Kit", systemImage: "wallet.bifold")
                 }
             } footer: {
-                Text("Connect to Penny to Apple Card, Apple High-Yield Savings Account, Apple Cash, and more in the UK.")
+                Text("Connect Penny to Apple Card, Apple High-Yield Savings Account, Apple Cash, and connected bank cards in your Apple Wallet.")
             }
         }
         .tint(.primary)

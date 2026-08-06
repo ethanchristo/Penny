@@ -70,10 +70,19 @@ struct SimpleFINAccount: Decodable, Identifiable {
         transactions = try container.decodeIfPresent([SimpleFINTransaction].self, forKey: .transactions) ?? []
     }
 
-    /// Signed numeric balance for the net total: the bank's *available* balance
-    /// (posted minus pending holds) when reported, falling back to the posted
-    /// balance. e.g. "-1234.56" -> -1234.56.
-    var balanceValue: Decimal { Decimal(string: availableBalance ?? balance) ?? 0 }
+    /// Signed numeric balance for the net total: the bank's posted balance.
+    /// e.g. "-1234.56" -> -1234.56.
+    var balanceValue: Decimal { Decimal(string: balance) ?? 0 }
+
+    /// The bank's *available* balance (posted minus pending holds) when reported,
+    /// falling back to the posted balance. Used for checking/savings accounts that
+    /// opt into available balance via `Account.useAvailableBalance`.
+    var availableBalanceValue: Decimal { Decimal(string: availableBalance ?? balance) ?? 0 }
+
+    /// Picks the posted or available balance for the net total.
+    func balanceValue(preferAvailable: Bool) -> Decimal {
+        preferAvailable ? availableBalanceValue : balanceValue
+    }
 
     /// "1234.56" + "USD" -> "$1,234.56". Falls back to the raw string for
     /// non-ISO currencies (SimpleFIN allows custom currencies as URLs).
@@ -311,10 +320,15 @@ enum SimpleFINConfig {
 
     /// Records each fetched account's reported balance so the net total can use the
     /// bank's live figure. Called on every sync from the feed's `SimpleFINAccount`s.
-    static func recordBalances(from remoteAccounts: [SimpleFINAccount]) {
+    /// Accounts whose SimpleFIN id is in `preferAvailableIDs` (checking/savings that
+    /// opted into `Account.useAvailableBalance`) record their available balance;
+    /// everything else records the posted balance.
+    static func recordBalances(from remoteAccounts: [SimpleFINAccount],
+                               preferAvailableIDs: Set<String> = []) {
         var balances = accountBalances
         for remote in remoteAccounts {
-            balances[remote.id] = abs((remote.balanceValue as NSDecimalNumber).doubleValue)
+            let value = remote.balanceValue(preferAvailable: preferAvailableIDs.contains(remote.id))
+            balances[remote.id] = abs((value as NSDecimalNumber).doubleValue)
         }
         accountBalances = balances
     }
@@ -420,19 +434,25 @@ enum SimpleFINImporter {
     @discardableResult
     static func importNewTransactions(_ remoteAccounts: [SimpleFINAccount],
                                       into context: ModelContext) async -> Result {
-        // Snapshot the bank's live balances so the net total can prefer them over
-        // replaying transactions. Recorded even before setup completes below.
-        SimpleFINConfig.recordBalances(from: remoteAccounts)
-
-        guard let connectedDate = SimpleFINConfig.connectedDate else { return Result() }
-        let checkingID = SimpleFINConfig.checkingID
-
         // Index existing accounts by their SimpleFIN id for O(1) lookup.
         let localAccounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
         var accountsByExternalID: [String: Account] = [:]
         for account in localAccounts {
             if let externalID = account.externalID { accountsByExternalID[externalID] = account }
         }
+
+        // Checking/savings accounts that opted into the available balance. Credit
+        // cards never do, so the net total always uses their posted balance.
+        let preferAvailableIDs = Set(localAccounts
+            .filter { $0.accountType != .credit && $0.useAvailableBalance }
+            .compactMap(\.externalID))
+
+        // Snapshot the bank's live balances so the net total can prefer them over
+        // replaying transactions. Recorded even before setup completes below.
+        SimpleFINConfig.recordBalances(from: remoteAccounts, preferAvailableIDs: preferAvailableIDs)
+
+        guard let connectedDate = SimpleFINConfig.connectedDate else { return Result() }
+        let checkingID = SimpleFINConfig.checkingID
 
         let allTransactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
         let existingTxnIDs = Set(allTransactions.compactMap(\.externalID))

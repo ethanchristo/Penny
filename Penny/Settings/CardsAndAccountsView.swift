@@ -10,6 +10,7 @@ import SwiftUI
 
 struct CardsAndAccountsView: View {
     @AppStorage("default_checking_name") private var defaultCheckingName: String = "Checking"
+    @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
 
     @Environment(\.modelContext) var modelContext
     
@@ -24,8 +25,41 @@ struct CardsAndAccountsView: View {
         accounts.filter { $0.accountType == .credit }
     }
     
-    var nonCreditAccounts: [Account] {
-        accounts.filter { $0.accountType != .credit }
+    var checkingAccounts: [Account] {
+        accounts.filter { $0.accountType == .checking }
+    }
+    
+    var savingsAccounts: [Account] {
+        accounts.filter { $0.accountType == .savings }
+    }
+
+    /// Live balances recorded on the last sync, merged from both bank-sync
+    /// sources and keyed by `Account.externalID` (FinanceKit ids are namespaced,
+    /// so the two never collide).
+    private var liveBalances: [String: Double] {
+        var balances = SimpleFINConfig.accountBalances
+        balances.merge(FinanceKitConfig.accountBalances) { _, new in new }
+        return balances
+    }
+
+    /// Formatted balance for a linked account: the last-synced live balance when
+    /// available, otherwise derived from the account's own transactions.
+    private func balanceText(for account: Account) -> String {
+        let amount: Double
+        if let externalID = account.externalID, let balance = liveBalances[externalID] {
+            amount = balance
+        } else {
+            amount = (account.transactions ?? []).reduce(0.0) { $0 + ($1.isIncome ? $1.amount : -$1.amount) }
+        }
+        return amount.formatted(.currency(code: currencyCode))
+    }
+
+    /// Formatted balance for the primary checking account, whose live balance is
+    /// keyed by whichever source designated it (SimpleFIN or FinanceKit).
+    private var primaryCheckingBalanceText: String {
+        let ids = [SimpleFINConfig.checkingID, FinanceKitConfig.checkingID].compactMap { $0 }
+        let amount = ids.compactMap { liveBalances[$0] }.first ?? 0
+        return amount.formatted(.currency(code: currencyCode))
     }
     
     private let columns = [
@@ -33,60 +67,129 @@ struct CardsAndAccountsView: View {
     ]
     
     var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
-                if !creditCards.isEmpty {
-                    Section {
-                        ForEach(creditCards) { card in
-                            Button {
-                                selectedAccount = card
-                            } label: {
-                                AccountCell(account: card)
-                                    .tint(.secondary)
-                            }
+        List {
+            Section {
+                ForEach(creditCards) { card in
+                    Button {
+                        selectedAccount = card
+                    } label: {
+                        HStack {
+                            Text(card.name)
+                            Spacer()
+                            Text(balanceText(for: card))
+                                .foregroundStyle(.secondary)
                         }
-                    } header: {
-                        Text("Credit Cards")
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                            .font(.headline)
+                    }
+                    .tint(.primary)
+                }
+            } header: {
+                Text("Credit Cards")
+            }
+            
+            Section {
+                Button {
+                    
+                } label: {
+                    HStack {
+                        Text(defaultCheckingName)
+                        Spacer()
+                        Text(primaryCheckingBalanceText)
                             .foregroundStyle(.secondary)
                     }
                 }
+                .tint(.primary)
                 
-                Section {
-                    ForEach(nonCreditAccounts) { account in
-                        Button {
-                            selectedAccount = account
-                        } label: {
-                            AccountCell(account: account)
-                                .tint(.secondary)
+                ForEach(checkingAccounts) { card in
+                    Button {
+                        selectedAccount = card
+                    } label: {
+                        HStack {
+                            Text(card.name)
+                            Spacer()
+                            Text(balanceText(for: card))
+                                .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    HStack {
-                        Text("Accounts")
-                            .foregroundStyle(Color.secondary)
-                        
-                        Menu {
-                            Button("Change default checking account name") {
-                                checkingNameSheet = true
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
-                        .tint(.secondary)
-                        
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    .font(.headline)
+                    .tint(.primary)
                 }
-                
+            } header: {
+                Text("Checking Accounts")
             }
-            .padding(.horizontal, 10)
+            
+            Section {
+                ForEach(savingsAccounts) { card in
+                    Button {
+                        selectedAccount = card
+                    } label: {
+                        HStack {
+                            Text(card.name)
+                            Spacer()
+                            Text(balanceText(for: card))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(.primary)
+                }
+            } header: {
+                Text("Savings Accounts")
+            }
         }
-        .background(Color(UIColor.systemGroupedBackground))
+        .listRowSpacing(12)
+        
+//        ScrollView {
+//            LazyVGrid(columns: columns, spacing: 16) {
+//                if !creditCards.isEmpty {
+//                    Section {
+//                        ForEach(creditCards) { card in
+//                            Button {
+//                                selectedAccount = card
+//                            } label: {
+//                                AccountCell(account: card)
+//                                    .tint(.secondary)
+//                            }
+//                        }
+//                    } header: {
+//                        Text("Credit Cards")
+//                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+//                            .padding(.horizontal)
+//                            .font(.headline)
+//                            .foregroundStyle(.secondary)
+//                    }
+//                }
+//                
+//                Section {
+//                    ForEach(nonCreditAccounts) { account in
+//                        Button {
+//                            selectedAccount = account
+//                        } label: {
+//                            AccountCell(account: account)
+//                                .tint(.secondary)
+//                        }
+//                    }
+//                } header: {
+//                    HStack {
+//                        Text("Accounts")
+//                            .foregroundStyle(Color.secondary)
+//                        
+//                        Menu {
+//                            Button("Change default checking account name") {
+//                                checkingNameSheet = true
+//                            }
+//                        } label: {
+//                            Image(systemName: "ellipsis.circle")
+//                        }
+//                        .tint(.secondary)
+//                        
+//                    }
+//                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+//                    .padding(.horizontal)
+//                    .font(.headline)
+//                }
+//                
+//            }
+//            .padding(.horizontal, 10)
+//        }
+//        .background(Color(UIColor.systemGroupedBackground))
         .navigationTitle("Cards & Accounts")
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
@@ -202,6 +305,7 @@ struct EditAccountView: View {
     @State private var draftAccountType: AccountType = .checking
     @State private var draftClosingDate: Int = 1
     @State private var draftDueDate: Int = 1
+    @State private var draftUseAvailableBalance = false
     
     @State private var newAccount = false
     
@@ -225,6 +329,14 @@ struct EditAccountView: View {
                 }
             }
             
+            if draftAccountType != .credit {
+                Section {
+                    Toggle("Use Available Balance", isOn: $draftUseAvailableBalance)
+                } footer: {
+                    Text("Use your bank's available balance (posted minus pending holds) for the net total instead of the posted balance.")
+                }
+            }
+
             if draftAccountType == .credit {
                 Section {
                     Picker("Closing Date", selection: $draftClosingDate) {
@@ -299,6 +411,7 @@ struct EditAccountView: View {
             draftAccountType = existingAccount.accountType
             draftClosingDate = existingAccount.closingDate ?? 1
             draftDueDate = existingAccount.dueDate ?? 1
+            draftUseAvailableBalance = existingAccount.useAvailableBalance
         }
     }
     
