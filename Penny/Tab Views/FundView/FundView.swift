@@ -80,6 +80,7 @@ struct FundView: View {
                                         showEndedFunds.toggle()
                                     }
                                 }
+                                .sensoryFeedback(.impact(weight: .light), trigger: showEndedFunds)
                             }
                         }
                         

@@ -15,6 +15,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		E617A04C30294679004DBDEC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E67E44152F04B2C600FB038D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E67E441C2F04B2C600FB038D;
+			remoteInfo = Penny;
+		};
 		E62B49CD2F730E6300779DB5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E67E44152F04B2C600FB038D /* Project object */;
@@ -53,6 +60,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		E617A04830294679004DBDEC /* PennyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PennyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NetTotalWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E67E441D2F04B2C600FB038D /* Penny.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Penny.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6A3119B2F730BC400F16CD9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -110,6 +118,11 @@
 			path = PennyFinanceMonitor;
 			sourceTree = "<group>";
 		};
+		E617A04930294679004DBDEC /* PennyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PennyTests;
+			sourceTree = "<group>";
+		};
 		E62B49C52F730E6200779DB5 /* NetTotalWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -130,6 +143,11 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		E617A04530294679004DBDEC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
 		E62B49BF2F730E6200779DB5 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
@@ -153,6 +171,7 @@
 				E67E441F2F04B2C600FB038D /* Penny */,
 				E62B49C52F730E6200779DB5 /* NetTotalWidget */,
 				E60F36173023892600C0DB5C /* PennyFinanceMonitor */,
+				E617A04930294679004DBDEC /* PennyTests */,
 				E6A3119A2F730BC400F16CD9 /* Frameworks */,
 				E67E441E2F04B2C600FB038D /* Products */,
 			);
@@ -163,6 +182,7 @@
 			children = (
 				E67E441D2F04B2C600FB038D /* Penny.app */,
 				E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */,
+				E617A04830294679004DBDEC /* PennyTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -179,6 +199,27 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		E617A04730294679004DBDEC /* PennyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E617A05030294679004DBDEC /* Build configuration list for PBXNativeTarget "PennyTests" */;
+			buildPhases = (
+				E617A04430294679004DBDEC /* Sources */,
+				E617A04530294679004DBDEC /* Frameworks */,
+				E617A04630294679004DBDEC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E617A04D30294679004DBDEC /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E617A04930294679004DBDEC /* PennyTests */,
+			);
+			name = PennyTests;
+			productName = PennyTests;
+			productReference = E617A04830294679004DBDEC /* PennyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E62B49D12F730E6300779DB5 /* Build configuration list for PBXNativeTarget "NetTotalWidgetExtension" */;
@@ -237,6 +278,10 @@
 				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					E617A04730294679004DBDEC = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = E67E441C2F04B2C600FB038D;
+					};
 					E62B49C12F730E6200779DB5 = {
 						CreatedOnToolsVersion = 26.3;
 					};
@@ -264,11 +309,17 @@
 			targets = (
 				E67E441C2F04B2C600FB038D /* Penny */,
 				E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */,
+				E617A04730294679004DBDEC /* PennyTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		E617A04630294679004DBDEC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
 		E62B49C02F730E6200779DB5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
@@ -282,6 +333,11 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		E617A04430294679004DBDEC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 		E62B49BE2F730E6200779DB5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
@@ -295,6 +351,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		E617A04D30294679004DBDEC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E67E441C2F04B2C600FB038D /* Penny */;
+			targetProxy = E617A04C30294679004DBDEC /* PBXContainerItemProxy */;
+		};
 		E62B49CE2F730E6300779DB5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */;
@@ -303,6 +364,53 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		E617A04E30294679004DBDEC /* Debug configuration for PBXNativeTarget "PennyTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 435K8A8ARN;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ethanchristo.PennyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Penny.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Penny";
+			};
+			name = Debug;
+		};
+		E617A04F30294679004DBDEC /* Release configuration for PBXNativeTarget "PennyTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 435K8A8ARN;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ethanchristo.PennyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Penny.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Penny";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		E62B49D22F730E6300779DB5 /* Debug configuration for PBXNativeTarget "NetTotalWidgetExtension" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -585,6 +693,14 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		E617A05030294679004DBDEC /* Build configuration list for PBXNativeTarget "PennyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E617A04E30294679004DBDEC /* Debug configuration for PBXNativeTarget "PennyTests" */,
+				E617A04F30294679004DBDEC /* Release configuration for PBXNativeTarget "PennyTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
 		E62B49D12F730E6300779DB5 /* Build configuration list for PBXNativeTarget "NetTotalWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

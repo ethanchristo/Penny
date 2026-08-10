@@ -27,6 +27,9 @@ struct SettingsView: View {
     // (Total Balance) or just the last closed statement's amount due (Amount Due).
     @AppStorage("net_total_credit_mode", store: .group) private var creditMode: CreditCardBalanceType = .balance
     @AppStorage("show_insights") private var showInsights: Bool = true
+    // Controls whether the first-launch onboarding flow is shown. Resetting it
+    // re-presents onboarding on the next app launch.
+    @AppStorage("has_completed_onboarding") private var hasCompletedOnboarding: Bool = false
 
     @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
@@ -178,6 +181,11 @@ struct SettingsView: View {
                     if let url = URL(string: urlString) {
                         openURL(url)
                     }
+                }
+                .foregroundStyle(.primary)
+
+                Button("Reset Onboarding", systemImage: "arrow.counterclockwise") {
+                    hasCompletedOnboarding = false
                 }
                 .foregroundStyle(.primary)
             } header: {

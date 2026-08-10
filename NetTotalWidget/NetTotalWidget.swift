@@ -62,9 +62,9 @@ struct PennyWidgetEntryView : View {
     
     private var displayTotalColor: Color {
         if colorScheme == .dark {
-            .white
+            background.mix(with: .white, by: 0.6)
         } else {
-            .black
+            background.mix(with: .black, by: 0.6)
         }
     }
 
@@ -87,11 +87,11 @@ struct PennyWidgetEntryView : View {
                 .font(.largeTitle.bold())
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-                .foregroundStyle(background.mix(with: displayTotalColor, by: 0.6))
+                .foregroundStyle(displayTotalColor)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .fontDesign(.rounded)
-        .containerBackground(background.opacity(0.7).gradient, for: .widget)
+        .containerBackground(colorScheme == .light ? AnyShapeStyle(background.gradient.opacity(0.7)) : AnyShapeStyle(background.gradient.opacity(0.3)), for: .widget)
     }
 }
 

@@ -186,6 +186,10 @@ struct SingleTransactionView: View {
         }
         
         if let existingTx = transaction {
+            // Capture state needed to learn a category rule BEFORE we overwrite it.
+            let wasImported = existingTx.externalID != nil
+            let previousCategory = existingTx.category
+
             // Update existing
             existingTx.amount = draft.amount
             existingTx.isIncome = draft.isIncome
@@ -196,6 +200,16 @@ struct SingleTransactionView: View {
             existingTx.fund = draft.fund
             existingTx.recurrence = draft.recurrence
             existingTx.endDate = draft.endDate
+
+            // If the user manually re-categorized an imported transaction, remember
+            // the choice as a rule so future imports of the same merchant match it.
+            if wasImported, draft.fund == nil {
+                learnCategoryRule(
+                    notes: draft.notes,
+                    newCategory: finalCategory,
+                    previousCategory: previousCategory
+                )
+            }
         } else {
             // Create brand new
             let newTx = Transaction(
@@ -218,6 +232,40 @@ struct SingleTransactionView: View {
 
         // A payroll-categorized edit should move the payday-anchored window right away.
         syncPayrollPayPeriodAnchor()
+    }
+
+    /// Creates a category rule keyed on an imported transaction's notes/merchant so
+    /// that future SimpleFIN / FinanceKit imports of the same merchant are assigned
+    /// the category the user just chose. No-ops when there's nothing to match on or
+    /// when the category didn't actually change.
+    private func learnCategoryRule(notes: String, newCategory: Category, previousCategory: Category?) -> Void {
+        let keyword = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Need a merchant/notes string to match against, and the category must have
+        // actually changed — no point recording a rule for an unchanged category.
+        guard !keyword.isEmpty, previousCategory?.id != newCategory.id else { return }
+
+        // Remove any existing rules on OTHER categories that match this exact keyword,
+        // so the re-categorization actually takes effect (rule matching returns the
+        // first category whose rule matches).
+        for category in categories where category.id != newCategory.id {
+            category.rules?.removeAll { rule in
+                (rule.inputNotes ?? "").caseInsensitiveCompare(keyword) == .orderedSame
+            }
+        }
+
+        // Don't duplicate a rule that already exists on the target category.
+        let alreadyExists = (newCategory.rules ?? []).contains { rule in
+            (rule.inputNotes ?? "").caseInsensitiveCompare(keyword) == .orderedSame
+        }
+        guard !alreadyExists else { return }
+
+        let rule = CategoryRules(inputNotes: keyword)
+        rule.category = newCategory
+        newCategory.rules = (newCategory.rules ?? []) + [rule]
+        modelContext.insert(rule)
+
+        log.info("Learned category rule '\(keyword, privacy: .public)' → \(newCategory.name, privacy: .public)")
     }
 }
 
@@ -308,157 +356,26 @@ struct EditTransactionView: View {
             
             Spacer()
             
-//            HStack {
-//                Button {
-//                    showDateSheet = true
-//                } label: {
-//                    Text(draft.date, format: .dateTime.month(.abbreviated).day().year())
-//                        .padding(8)
-//                        .glassEffect(.regular)
-//                }
-//                
-//                Button {
-//                    showRecurringSheet = true
-//                } label: {
-//                    Image(systemName: "arrow.trianglehead.2.clockwise")
-//                        .padding(8)
-//                        .glassEffect(.regular, in: .circle)
-//                }
-//                .disabled(draft.fund != nil)
-//                
-//                Spacer()
-//                
-//                Menu {
-//                    Button {
-//                        addAccount = true
-//                    } label: {
-//                        Label("Add Card/Account", systemImage: "plus")
-//                    }
-//                    
-//                    Divider()
-//                    
-//                    Picker("Accounts", selection: $draft.account) {
-//                        ForEach(accounts.filter { $0.accountType != .credit }) { account in
-//                            Text(account.name).tag(account as Account?)
-//                        }
-//                        
-//                        Text(defaultCheckingName).tag(nil as Account?)
-//                    }
-//                    .labelsVisibility(.visible)
-//                    
-//                    Divider()
-//                    
-//                    Picker("Credit Cards", selection: $draft.account) {
-//                        ForEach(accounts.filter { $0.accountType == .credit }) { card in
-//                            Text(card.name).tag(card as Account?)
-//                        }
-//                    }
-//                    .labelsVisibility(.visible)
-//                } label: {
-//                    Group {
-//                        if let account = draft.account, account.accountType == .credit {
-//                            HStack {
-//                                Image(systemName: "creditcard")
-//                                Text(account.name)
-//                            }
-//                        }
-//                        
-//                        if let account = draft.account, account.accountType == .savings {
-//                            HStack {
-//                                Image(systemName: "s.square")
-//                                Text(account.name)
-//                            }
-//                        }
-//                        
-//                        if let account = draft.account, account.accountType == .checking {
-//                            Text(account.name)
-//                        }
-//                        
-//                        if draft.account == nil {
-//                            Text(defaultCheckingName)
-//                        }
-//                    }
-//                    .padding(8)
-//                    .glassEffect(.regular, in: .capsule)
-//                }
-//                Menu {
-//                    Menu {
-//                        Button {
-//                            addCategory = true
-//                            
-//                        } label: {
-//                            Label("Add Category", systemImage: "plus")
-//                        }
-//                        
-//                        Divider()
-//
-//                        
-//                        Picker("Category", selection: $draft.category) {
-//                            ForEach(categories) { category in
-//                                Text("\(category.symbol)  \(category.name)").tag(category as Category?)
-//                            }
-//                        }
-//                    } label: {
-//                        Label("Category", systemImage: "rectangle.grid.2x2.fill")
-//                        if let cat = draft.category {
-//                            Text(cat.name)
-//                                .font(.caption)
-//                        }
-//                    }
-//                    
-//                    Menu {
-//                        Button {
-//                            addFund = true
-//                        } label: {
-//                            Label("Add Fund", systemImage: "plus")
-//                        }
-//                        
-//                        Divider()
-//                        
-//                        Picker("Fund", selection: $draft.fund) {
-//                            ForEach(funds) { fund in
-//                                Text("\(fund.symbol)  \(fund.name)").tag(fund)
-//                            }
-//                        }
-//                    } label: {
-//                        Label("Fund", systemImage: "rectangle.stack.fill")
-//                        if let fund = draft.fund {
-//                            Text(fund.name)
-//                                .font(.caption)
-//                        }
-//                    }
-//                } label: {
-//                    Group {
-//                        if let category = draft.category {
-//                            Text(category.symbol)
-//                                .padding(9)
-//                                .glassEffect(.regular.tint(category.color.opacity(0.5)))
-//                        } else if let fund = draft.fund {
-//                            Text(fund.symbol)
-//                                .padding(9)
-//                                .glassEffect(.regular.tint(fund.color.opacity(0.5)))
-//                        } else {
-//                            Text("Category/Fund")
-//                                .padding(8)
-//                                .glassEffect()
-//                        }
-//                    }
-//                }
-//            }
-//            .padding(.horizontal, 10)
-
-            LazyVGrid(columns: Array(repeating: GridItem(), count: 3)) {
+            HStack {
                 Button {
                     showDateSheet = true
                 } label: {
                     Text(draft.date, format: .dateTime.month(.abbreviated).day().year())
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 15)
-                        .glassEffect(.regular.interactive())
+                        .lineLimit(1)
+                        .padding(8)
+                        .glassEffect(.regular)
                 }
+                
+                Button {
+                    showRecurringSheet = true
+                } label: {
+                    Image(systemName: "arrow.trianglehead.2.clockwise")
+                        .padding(8)
+                        .glassEffect(.regular, in: .circle)
+                }
+                .disabled(draft.fund != nil)
+                
+                Spacer()
                 
                 Menu {
                     Button {
@@ -510,15 +427,10 @@ struct EditTransactionView: View {
                             Text(defaultCheckingName)
                         }
                     }
-                    .font(.headline)
-//                    .lineLimit(1)
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 15)
-                    .glassEffect(.regular.interactive())
+                    .lineLimit(1)
+                    .padding(8)
+                    .glassEffect(.regular, in: .capsule)
                 }
-                
                 Menu {
                     Menu {
                         Button {
@@ -569,22 +481,184 @@ struct EditTransactionView: View {
                     Group {
                         if let category = draft.category {
                             Text(category.symbol)
-                                
+                                .padding(9)
+                                .glassEffect(.regular.tint(category.color.opacity(0.5)))
                         } else if let fund = draft.fund {
                             Text(fund.symbol)
-                                
+                                .padding(9)
+                                .glassEffect(.regular.tint(fund.color.opacity(0.5)))
                         } else {
                             Text("Category/Fund")
-                                
+                                .padding(8)
+                                .glassEffect()
                         }
                     }
-                    .font(.title.bold())
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 15)
-                    .glassEffect(.regular.interactive())
                 }
+            }
+            .font(.headline)
+            .padding(.horizontal, 10)
+
+            LazyVGrid(columns: Array(repeating: GridItem(), count: 3)) {
+//                HStack {
+//                    Button {
+//                        showDateSheet = true
+//                    } label: {
+//                        Text(draft.date, format: .dateTime.month(.abbreviated).day().year())
+//                    }
+//                    
+//                    Button {
+//                        showRecurringSheet = true
+//                    } label: {
+//                        Image(systemName: "arrow.trianglehead.2.clockwise")
+//                            .padding(8)
+//                            .glassEffect(.regular, in: .circle)
+//                    }
+//                    .disabled(draft.fund != nil)
+//
+//                           
+//                }
+//                .font(.headline)
+//                .foregroundStyle(.primary)
+//                .frame(maxWidth: .infinity)
+//                .padding(.horizontal, 16)
+//                .padding(.vertical, 14)
+//                .glassEffect(.regular.interactive())
+//                
+//                
+//                Menu {
+//                    Button {
+//                        addAccount = true
+//                    } label: {
+//                        Label("Add Card/Account", systemImage: "plus")
+//                    }
+//                    
+//                    Divider()
+//                    
+//                    Picker("Accounts", selection: $draft.account) {
+//                        ForEach(accounts.filter { $0.accountType != .credit }) { account in
+//                            Text(account.name).tag(account as Account?)
+//                        }
+//                        
+//                        Text(defaultCheckingName).tag(nil as Account?)
+//                    }
+//                    .labelsVisibility(.visible)
+//                    
+//                    Divider()
+//                    
+//                    Picker("Credit Cards", selection: $draft.account) {
+//                        ForEach(accounts.filter { $0.accountType == .credit }) { card in
+//                            Text(card.name).tag(card as Account?)
+//                        }
+//                    }
+//                    .labelsVisibility(.visible)
+//                } label: {
+//                    Group {
+//                        if let account = draft.account, account.accountType == .credit {
+//                            HStack {
+//                                Image(systemName: "creditcard")
+//                                Text(account.name)
+//                            }
+//                        }
+//                        
+//                        if let account = draft.account, account.accountType == .savings {
+//                            HStack {
+//                                Image(systemName: "s.square")
+//                                Text(account.name)
+//                            }
+//                        }
+//                        
+//                        if let account = draft.account, account.accountType == .checking {
+//                            Text(account.name)
+//                        }
+//                        
+//                        if draft.account == nil {
+//                            Text(defaultCheckingName)
+//                        }
+//                    }
+//                    .font(.headline)
+////                    .lineLimit(1)
+//                    .foregroundStyle(.primary)
+//                    .frame(maxWidth: .infinity)
+//                    .padding(.horizontal, 20)
+//                    .padding(.vertical, 15)
+//                    .glassEffect(.regular.interactive())
+//                }
+//                
+//                Menu {
+//                    Menu {
+//                        Button {
+//                            addCategory = true
+//                            
+//                        } label: {
+//                            Label("Add Category", systemImage: "plus")
+//                        }
+//                        
+//                        Divider()
+//
+//                        
+//                        Picker("Category", selection: $draft.category) {
+//                            ForEach(categories) { category in
+//                                Text("\(category.symbol)  \(category.name)").tag(category as Category?)
+//                            }
+//                        }
+//                    } label: {
+//                        Label("Category", systemImage: "rectangle.grid.2x2.fill")
+//                        if let cat = draft.category {
+//                            Text(cat.name)
+//                                .font(.caption)
+//                        }
+//                    }
+//                    
+//                    Menu {
+//                        Button {
+//                            addFund = true
+//                        } label: {
+//                            Label("Add Fund", systemImage: "plus")
+//                        }
+//                        
+//                        Divider()
+//                        
+//                        Picker("Fund", selection: $draft.fund) {
+//                            ForEach(funds) { fund in
+//                                Text("\(fund.symbol)  \(fund.name)").tag(fund)
+//                            }
+//                        }
+//                    } label: {
+//                        Label("Fund", systemImage: "rectangle.stack.fill")
+//                        if let fund = draft.fund {
+//                            Text(fund.name)
+//                                .font(.caption)
+//                        }
+//                    }
+//                } label: {
+//                    Group {
+//                        if let category = draft.category {
+//                            Text(category.symbol)
+//                                .font(.title.bold())
+//                                .foregroundStyle(.primary)
+//                                .frame(maxWidth: .infinity)
+//                                .padding(.horizontal, 20)
+//                                .padding(.vertical, 15)
+//                                .glassEffect(.regular.tint(category.color.opacity(0.5)))
+//                        } else if let fund = draft.fund {
+//                            Text(fund.symbol)
+//                                .font(.title.bold())
+//                                .foregroundStyle(.primary)
+//                                .frame(maxWidth: .infinity)
+//                                .padding(.horizontal, 20)
+//                                .padding(.vertical, 15)
+//                                .glassEffect(.regular.tint(fund.color.opacity(0.5)))
+//                        } else {
+//                            Text("Category/Fund")
+//                                .font(.title.bold())
+//                                .foregroundStyle(.primary)
+//                                .frame(maxWidth: .infinity)
+//                                .padding(.horizontal, 20)
+//                                .padding(.vertical, 15)
+//                                .glassEffect()
+//                        }
+//                    }
+//                }
             
                 ForEach(1...9, id: \.self) { index in
                     Button {
@@ -661,7 +735,7 @@ struct EditTransactionView: View {
                     
                     Text(expenseName).tag(false)
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.palette)
             }
             .sharedBackgroundVisibility(.hidden)
         }

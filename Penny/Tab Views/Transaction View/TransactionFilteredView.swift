@@ -22,6 +22,8 @@ struct TransactionFilteredView: View {
     @State private var showFundSection = false
     @State private var pendingDeletion: Transaction? = nil
     
+    @State private var haptics: Int = 0
+    
     let transactions: [Transaction]
     let namespace: Namespace.ID
 
@@ -60,7 +62,7 @@ struct TransactionFilteredView: View {
     private func makeSections() -> DisplaySections {
         let now = Date.now
         // Safely calculate exactly 48 hours ago using Calendar
-        let fortyEightHoursAgo = Calendar.current.date(byAdding: .hour, value: -48, to: now) ?? now.addingTimeInterval(-172800)
+        let fortyEightHoursAgo = Calendar.current.date(byAdding: .hour, value: -48, to: now)?.startOfDay ?? now.addingTimeInterval(-172800)
 
         // 1. Search + dropdown filters, applied a single time.
         let filtered = transactions.filter { t in
@@ -222,6 +224,10 @@ struct TransactionFilteredView: View {
             }
         }
         .safeAreaPadding(.bottom)
+        .sensoryFeedback(.impact(weight: .light), trigger: haptics)
+        .sensoryFeedback(.impact(weight: .light), trigger: showFundSection)
+        .sensoryFeedback(.impact(weight: .light), trigger: showUpcomingSection)
+        .sensoryFeedback(.impact(weight: .light), trigger: showRecurringSection)
     }
     
     @ViewBuilder
@@ -242,6 +248,7 @@ struct TransactionFilteredView: View {
             
             ForEach(sections.recent) { transaction in
                 Button {
+                    haptics += 1
                     editingTransaction = transaction
                 } label: {
                     TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: false, grouping: grouping)
@@ -309,6 +316,7 @@ struct TransactionFilteredView: View {
             if showRecurringSection {
                 ForEach(sections.recurring) { transaction in
                     Button {
+                        haptics += 1
                         editingTransaction = transaction
                     } label: {
                         TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: false, grouping: grouping)
@@ -351,6 +359,7 @@ struct TransactionFilteredView: View {
             
             ForEach(sections.upcoming) { transaction in
                 Button {
+                    haptics += 1
                     editingTransaction = transaction
                 } label : {
                     TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: true, grouping: grouping)
@@ -383,6 +392,7 @@ struct TransactionFilteredView: View {
                 
                 ForEach(sections.notRecurring) { transaction in
                     Button {
+                        haptics += 1
                         editingTransaction = transaction
                     } label : {
                         TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: false, grouping: grouping)
@@ -412,6 +422,7 @@ struct TransactionFilteredView: View {
                     Section {
                         ForEach(dateGroup.value) { transaction in
                             Button {
+                                haptics += 1
                                 editingTransaction = transaction
                             } label : {
                                 TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: false, grouping: grouping)

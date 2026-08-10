@@ -17,6 +17,8 @@ struct NetTotalView: View {
     @State private var netIncomeSheet = false
     @State private var netExpensesSheet = false
     
+    @State private var haptics: Int = 0
+    
     @Binding var selectedTimeRange: HomeTimeRange
     
     let modelContext: ModelContext
@@ -48,10 +50,11 @@ struct NetTotalView: View {
         }
     }
     
-    var body: some View {
+    var body: some View {    
         HStack(spacing: 12) {
             // LEFT SIDE: The big Net Total Button
             Button {
+                haptics += 1
                 netTotalSheet = true
             } label: {
                 VStack(spacing: 4) {
@@ -86,6 +89,7 @@ struct NetTotalView: View {
             
             VStack(spacing: 15) {
                 Button {
+                    haptics += 1
                     netIncomeSheet = true
                 } label: {
                     HStack {
@@ -102,6 +106,7 @@ struct NetTotalView: View {
                 .glassEffect(.clear.interactive())
                 
                 Button {
+                    haptics += 1
                     netExpensesSheet = true
                 } label: {
                     HStack {
@@ -120,6 +125,7 @@ struct NetTotalView: View {
         }
         .tint(.primary)
         .frame(height: 160)
+        .sensoryFeedback(.impact(weight: .heavy), trigger: haptics)
         
         .sheet(isPresented: $netTotalSheet) {
             NavigationStack {

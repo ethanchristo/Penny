@@ -98,7 +98,7 @@ struct OverallBudgetSettingsView: View {
             Section {
                 if hasBudget {
                     HStack {
-                        HStack(spacing: 1) {
+                        HStack(alignment: .lastTextBaseline, spacing: 1) {
                             Text(currencySymbol)
                                 .foregroundStyle(Color.secondary)
                                 .font(.title2)

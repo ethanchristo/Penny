@@ -536,6 +536,11 @@ private struct InsightsCell: View {
                     
                     Text(option.title)
                         .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.secondary)
                 }
                 
                 .font(.headline)

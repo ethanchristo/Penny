@@ -218,6 +218,17 @@ enum SimpleFINConfig {
         static let accountCutoffs = "simplefin_account_cutoffs"
         static let dismissedIDs = "simplefin_dismissed_ids"
         static let accountBalances = "simplefin_account_balances"
+        static let accountNames = "simplefin_account_names"
+        static let checkingUsesAvailableBalance = "default_checking_use_available_balance"
+    }
+
+    /// Whether the primary checking (`account == nil`, the designated `checkingID`)
+    /// records its available balance rather than its posted balance for the net
+    /// total. The default checking has no `Account` object, so this stands in for
+    /// `Account.useAvailableBalance`. Written by `EditDefaultCheckingView`.
+    static var checkingUsesAvailableBalance: Bool {
+        get { defaults.bool(forKey: Key.checkingUsesAvailableBalance) }
+        set { defaults.set(newValue, forKey: Key.checkingUsesAvailableBalance) }
     }
 
     /// External ids of imported transactions the user has deleted. The importer
@@ -318,19 +329,31 @@ enum SimpleFINConfig {
         set { defaults.set(newValue, forKey: Key.accountBalances) }
     }
 
+    /// Display name last seen for each account, keyed by SimpleFIN account id. Lets
+    /// the Cards & Accounts screen offer a reassignment picker without a live
+    /// re-fetch. Recorded on every sync alongside the balances.
+    static var accountNames: [String: String] {
+        get { defaults.dictionary(forKey: Key.accountNames) as? [String: String] ?? [:] }
+        set { defaults.set(newValue, forKey: Key.accountNames) }
+    }
+
     /// Records each fetched account's reported balance so the net total can use the
     /// bank's live figure. Called on every sync from the feed's `SimpleFINAccount`s.
     /// Accounts whose SimpleFIN id is in `preferAvailableIDs` (checking/savings that
     /// opted into `Account.useAvailableBalance`) record their available balance;
-    /// everything else records the posted balance.
+    /// everything else records the posted balance. Names are captured too so cards
+    /// can be reassigned later.
     static func recordBalances(from remoteAccounts: [SimpleFINAccount],
                                preferAvailableIDs: Set<String> = []) {
         var balances = accountBalances
+        var names = accountNames
         for remote in remoteAccounts {
             let value = remote.balanceValue(preferAvailable: preferAvailableIDs.contains(remote.id))
             balances[remote.id] = abs((value as NSDecimalNumber).doubleValue)
+            names[remote.id] = remote.name
         }
         accountBalances = balances
+        accountNames = names
     }
 
     static var isConfigured: Bool { connectedDate != nil }
@@ -350,6 +373,7 @@ enum SimpleFINConfig {
         defaults.removeObject(forKey: Key.accountCutoffs)
         defaults.removeObject(forKey: Key.dismissedIDs)
         defaults.removeObject(forKey: Key.accountBalances)
+        defaults.removeObject(forKey: Key.accountNames)
     }
 }
 
@@ -442,10 +466,14 @@ enum SimpleFINImporter {
         }
 
         // Checking/savings accounts that opted into the available balance. Credit
-        // cards never do, so the net total always uses their posted balance.
-        let preferAvailableIDs = Set(localAccounts
+        // cards never do, so the net total always uses their posted balance. The
+        // primary checking has no `Account`, so its preference lives in config.
+        var preferAvailableIDs = Set(localAccounts
             .filter { $0.accountType != .credit && $0.useAvailableBalance }
             .compactMap(\.externalID))
+        if SimpleFINConfig.checkingUsesAvailableBalance, let checkingID = SimpleFINConfig.checkingID {
+            preferAvailableIDs.insert(checkingID)
+        }
 
         // Snapshot the bank's live balances so the net total can prefer them over
         // replaying transactions. Recorded even before setup completes below.

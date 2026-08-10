@@ -39,6 +39,7 @@ enum FinanceKitConfig {
         static let accountCutoffs = "financekit_account_cutoffs"
         static let dismissedIDs = "financekit_dismissed_ids"
         static let accountBalances = "financekit_account_balances"
+        static let accountNames = "financekit_account_names"
     }
 
     /// External ids of imported transactions the user has deleted, so future syncs
@@ -122,13 +123,25 @@ enum FinanceKitConfig {
         set { defaults.set(newValue, forKey: Key.accountBalances) }
     }
 
-    /// Records each fetched account's reported balance. Called on every sync.
+    /// Display name last seen for each account, keyed by the namespaced external id.
+    /// Lets the Cards & Accounts screen offer a reassignment picker without a live
+    /// re-fetch. Recorded on every sync alongside the balances.
+    static var accountNames: [String: String] {
+        get { defaults.dictionary(forKey: Key.accountNames) as? [String: String] ?? [:] }
+        set { defaults.set(newValue, forKey: Key.accountNames) }
+    }
+
+    /// Records each fetched account's reported balance and display name. Called on
+    /// every sync.
     static func recordBalances(from remoteAccounts: [FinanceKitAccountSnapshot]) {
         var balances = accountBalances
+        var names = accountNames
         for remote in remoteAccounts {
             balances[remote.id] = abs((remote.balanceValue as NSDecimalNumber).doubleValue)
+            names[remote.id] = remote.displayName
         }
         accountBalances = balances
+        accountNames = names
     }
 
     static var isConfigured: Bool { connectedDate != nil }
@@ -148,6 +161,7 @@ enum FinanceKitConfig {
         defaults.removeObject(forKey: Key.accountCutoffs)
         defaults.removeObject(forKey: Key.dismissedIDs)
         defaults.removeObject(forKey: Key.accountBalances)
+        defaults.removeObject(forKey: Key.accountNames)
     }
 }
 

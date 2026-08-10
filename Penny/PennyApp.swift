@@ -11,6 +11,7 @@ import SwiftUI
 @main
 struct PennyApp: App {
     @AppStorage("user_theme") private var currentTheme: AppTheme = .system
+    @AppStorage("has_completed_onboarding") private var hasCompletedOnboarding = false
 
     @State private var overallBudget = OverallBudget()
     @State private var router = AppRouter.shared
@@ -34,6 +35,12 @@ struct PennyApp: App {
             .preferredColorScheme(currentTheme.colorScheme)
             .environment(overallBudget)
             .environment(router)
+            .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
+                OnboardingView()
+                    .fontDesign(.rounded)
+                    .preferredColorScheme(currentTheme.colorScheme)
+                    .interactiveDismissDisabled()
+            }
             .task {
                 await seedDefaultCategoriesIfNeeded()
                 await indexEntitiesForSpotlight()

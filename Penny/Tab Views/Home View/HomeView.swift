@@ -47,8 +47,19 @@ struct HomeView: View {
     @State private var settingsSheet = false
     @State private var showAddTransaction = false
 
+    /// Value-based navigation path for pushes from the Home screen.
+    @State private var path = NavigationPath()
+
+    @State private var haptics: Int = 0
+
     private enum CustomSortOrder {
         case dateReverse, dateForward, aToZ, zToA
+    }
+
+    /// Destinations reachable from the Home screen, driven through `path`.
+    private enum HomeRoute: Hashable {
+        case budgets
+        case funds
     }
 
     private var backgroundColor: Color {
@@ -100,7 +111,7 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 NetTotalView(
                     selectedTimeRange: $selectedTimeRange,
@@ -120,33 +131,50 @@ struct HomeView: View {
                 .padding(.horizontal, 24)
                 
                 HStack {
-                    NavigationLink {
-                        BudgetView()
+                    Button {
+                        haptics += 1
+                        path.append(HomeRoute.budgets)
                     } label: {
-                        Label("Budgets", systemImage: "chart.bar.fill")
-                            .font(.headline)
-                            .lineLimit(1)
-                            .tint(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(24)
-                            .frame(height: 72)
-                            .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
+                        HStack {
+                            Label("Budgets", systemImage: "chart.bar.fill")
+                                .lineLimit(1)
+
+                            Spacer()
+
+
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.headline)
+                        .tint(.primary)
+                        .padding(24)
+                        .frame(height: 72)
+                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
                     }
-                    
-                    NavigationLink {
-                        FundView()
+
+                    Button {
+                        haptics += 1
+                        path.append(HomeRoute.funds)
                     } label: {
-                        Label("Funds", systemImage: "rectangle.stack.fill")
-                            .font(.headline)
-                            .lineLimit(1)
-                            .tint(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(24)
-                            .frame(height: 72)
-                            .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
+                        HStack {
+                            Label("Funds", systemImage: "rectangle.stack.fill")
+                                .lineLimit(1)
+                            
+                            Spacer()
+                            
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.headline)
+                        .tint(.primary)
+                        .padding(24)
+                        .frame(height: 72)
+                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
                     }
                     
                 }
+                .sensoryFeedback(.impact, trigger: haptics)
                 .padding(.top, 20)
                 .padding(.bottom, 8)
                 .padding(.horizontal, 24)
@@ -184,6 +212,12 @@ struct HomeView: View {
                 .ignoresSafeArea()
             }
             .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+            .navigationDestination(for: HomeRoute.self) { route in
+                switch route {
+                case .budgets:  BudgetView()
+                case .funds:    FundView()
+                }
+            }
             .navigationTitle("Overview")
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
@@ -206,36 +240,6 @@ struct HomeView: View {
                     }
                     .matchedTransitionSource(id: "addTransaction", in: namespace)
                 }
-                
-//                ToolbarItemGroup(placement: .bottomBar) {
-//                    NavigationLink {
-//                        BudgetView()
-//                    } label: {
-//                        Label("Budgets", systemImage: "chart.bar.fill")
-//                    }
-//                    
-//                    NavigationLink {
-//                        FundView()
-//                    } label: {
-//                        Label("Funds", systemImage: "rectangle.stack.fill")
-//                    }
-//                    
-//                    NavigationLink {
-//                        TransactionView()
-//                    } label: {
-//                        Label("All Transactions", systemImage: "list.bullet.rectangle.portrait.fill")
-//                    }
-//                        
-//                    
-//                    Spacer()
-//                    
-//                    Button {
-//                        showAddTransaction = true
-//                    } label: {
-//                        Label("Add Transaction", systemImage: "plus")
-//                    }
-//                    .matchedTransitionSource(id: "addTransaction", in: namespace)
-//                }
             }
         }
         .task(id: statsTaskID) {
