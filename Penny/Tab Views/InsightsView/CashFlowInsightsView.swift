@@ -445,7 +445,7 @@ struct CashFlowInsightsView: View {
     private var windowedTransactions: [Transaction] {
         let calendar = Calendar.current
         return transactions
-            .filter { $0.fund == nil }
+            .filter { $0.budget == nil }
             .filter { occurs($0, from: window.start, to: window.end, calendar: calendar) }
             .sorted { $0.date > $1.date }
     }
@@ -554,13 +554,13 @@ struct CashFlowInsightsView: View {
         }
         .sheet(isPresented: $showAddTransaction) {
             NavigationStack {
-                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: "addTransaction", in: namespace))
         }
         .sheet(item: $editingTransaction) { transaction in
             NavigationStack {
-                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
         }

@@ -44,18 +44,23 @@ func transactionsFingerprint(_ transactions: [Transaction]) -> Int {
     return hasher.finalize()
 }
 
-/// Fingerprint of the funds that feed `fundNetAdjustment()`. Folds in `remaining` (so
-/// re-tagging a transaction to a fund is caught) along with the goal/preAllocate/date
-/// inputs the adjustment depends on, so editing a fund alone refreshes the net total.
-@MainActor func fundsFingerprint(_ funds: [Fund]) -> Int {
+/// Fingerprint of the budgets that feed `budgetNetAdjustment()`, so editing a budget
+/// alone refreshes the net total. Folds in the amount/preFunding inputs the reserve
+/// depends on for every active budget (a pre-funded *category* budget now reserves too),
+/// plus freestanding `remaining` (so re-tagging a transaction to one is caught). Category
+/// spend changes are already covered by `transactionsFingerprint`.
+@MainActor func budgetsFingerprint(_ budgets: [Budget]) -> Int {
     var hasher = Hasher()
-    hasher.combine(funds.count)
-    for fund in funds {
-        hasher.combine(fund.goal)
-        hasher.combine(fund.preAllocate)
-        hasher.combine(fund.start)
-        hasher.combine(fund.end)
-        hasher.combine(fund.remaining)
+    for budget in budgets where budget.hasBudget {
+        hasher.combine(budget.id)
+        hasher.combine(budget.amount)
+        hasher.combine(budget.preFunding)
+        hasher.combine(budget.isFreestanding)
+        if budget.isFreestanding {
+            hasher.combine(budget.start)
+            hasher.combine(budget.end)
+            hasher.combine(budget.remaining)
+        }
     }
     return hasher.finalize()
 }

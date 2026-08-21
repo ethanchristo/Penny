@@ -31,7 +31,7 @@ class SharedDatabase {
 
         do {
             container = try ModelContainer(
-                for: Transaction.self, Account.self, Category.self, Budget.self, CategoryRules.self, Fund.self,
+                for: Transaction.self, Account.self, Category.self, Budget.self, CategoryRules.self,
                 configurations: configuration
             )
         } catch {
@@ -60,12 +60,14 @@ struct NetTotals: Sendable {
 actor StatsCalculator {
     func allTimeNetTotals() -> NetTotals {
         let transactions = (try? modelContext.fetch(FetchDescriptor<Transaction>())) ?? []
-        let funds = (try? modelContext.fetch(FetchDescriptor<Fund>())) ?? []
+        // Only freestanding budgets reserve against the net total; category budgets
+        // don't, so the reserve helpers filter on `isFreestanding` anyway.
+        let budgets = (try? modelContext.fetch(FetchDescriptor<Budget>())) ?? []
 
         return NetTotals(
-            income: netTotalAllTime(for: transactions, isIncome: true, funds: funds),
-            expenses: netTotalAllTime(for: transactions, isIncome: false, funds: funds),
-            total: netTotalAggregate(for: transactions, funds: funds)
+            income: netTotalAllTime(for: transactions, isIncome: true, budgets: budgets),
+            expenses: netTotalAllTime(for: transactions, isIncome: false, budgets: budgets),
+            total: netTotalAggregate(for: transactions, budgets: budgets)
         )
     }
 }

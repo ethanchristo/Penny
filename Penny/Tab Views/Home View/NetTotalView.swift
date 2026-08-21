@@ -14,8 +14,10 @@ struct NetTotalView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var netTotalSheet = false
-    @State private var netIncomeSheet = false
-    @State private var netExpensesSheet = false
+
+    @State private var breakdown: NetTotalBreakdown?
+
+    @State private var navRoute: NetTotalRoute?
     
     @State private var haptics: Int = 0
     
@@ -37,7 +39,15 @@ struct NetTotalView: View {
     let netTotal: Double
     
     let backgroundColor: Color
-                    
+
+    /// Destinations reachable from the income/expense buttons. Programmatic
+    /// navigation (Button + `navigationDestination`) rather than `NavigationLink`
+    /// so the tap can fire a haptic in its action, matching the rest of the app.
+    private enum NetTotalRoute: Hashable {
+        case budgets
+        case insights
+    }
+
     private let columns = [
         GridItem(.adaptive(minimum: 200), spacing: 15)
     ]
@@ -50,109 +60,141 @@ struct NetTotalView: View {
         }
     }
     
-    var body: some View {    
-        HStack(spacing: 12) {
-            // LEFT SIDE: The big Net Total Button
-            Button {
-                haptics += 1
-                netTotalSheet = true
-            } label: {
-                VStack(spacing: 4) {
-                    Text("Net Total")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Text(creditMode.title.uppercased())
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Spacer()
+    /// Recomputes the components that sum to the net total, using the same helper the
+    /// displayed total is derived from so the breakdown always reconciles. Budgets are
+    /// fetched on demand (only when the sheet opens) since the reserve depends on them.
+    private func computeBreakdown() -> NetTotalBreakdown {
+        let budgets = (try? modelContext.fetch(FetchDescriptor<Budget>())) ?? []
+        return netTotalBreakdown(for: transactions, budgets: budgets)
+    }
 
-                    Text(amountTruncation(for: netTotal, currencySymbol: currencySymbol))
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(totalColor)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding()
-                .frame(maxWidth: 200, maxHeight: .infinity)
-            }
-            .glassEffect(.clear.interactive(), in: RoundedRectangle(cornerRadius: 30))
-            .contextMenu {
-                Picker("Credit Card Mode", selection: $creditMode) {
-                    ForEach([CreditCardBalanceType.balance, .statement]) { mode in
-                        Text(mode.title).tag(mode)
-                    }
-                }
-                .labelsVisibility(.visible)
-            }
-            
-            VStack(spacing: 15) {
+    var body: some View {
+        VStack {
+            HStack(spacing: 12) {
+                // LEFT SIDE: The big Net Total Button
                 Button {
                     haptics += 1
-                    netIncomeSheet = true
+                    netTotalSheet = true
                 } label: {
-                    HStack {
-                        Image(systemName: "tray.and.arrow.down")
+                    VStack(spacing: 4) {
+                        Text("Net Total")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        Text(creditMode.title.uppercased())
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         
                         Spacer()
                         
-                        Text(amountTruncation(for: netIncome, currencySymbol: currencySymbol))
-                            .bold()
+                        Text(amountTruncation(for: netTotal, currencySymbol: currencySymbol))
+                            .font(.largeTitle.bold())
+                            .foregroundStyle(totalColor)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.horizontal)
+                    .padding()
+                    .frame(maxWidth: 200, maxHeight: .infinity)
                 }
-                .frame(maxWidth: 200, maxHeight: .infinity) // Stretch!
-                .glassEffect(.clear.interactive())
+                .glassEffect(.clear.interactive(), in: RoundedRectangle(cornerRadius: 36))
+                .contextMenu {
+                    Picker("Credit Card Mode", selection: $creditMode) {
+                        ForEach([CreditCardBalanceType.balance, .statement]) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .labelsVisibility(.visible)
+                }
                 
-                Button {
-                    haptics += 1
-                    netExpensesSheet = true
-                } label: {
-                    HStack {
-                        Image(systemName: "tray.and.arrow.up")
-                        
-                        Spacer()
-                        
-                        Text(amountTruncation(for: netExpenses, currencySymbol: currencySymbol))
-                            .bold()
+                VStack(spacing: 15) {
+                    Button {
+                        haptics += 1
+                        navRoute = .budgets
+                    } label: {
+                        HStack {
+                            Label("Budgets", systemImage: "rectangle.grid.2x2.fill")
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
+                    .frame(maxWidth: 200, maxHeight: .infinity) // Stretch!
+                    .glassEffect(.clear.interactive())
+                    
+                    Button {
+                        haptics += 1
+                        navRoute = .insights
+                    } label: {
+                        HStack {
+                            Label("Insights", systemImage: "chart.bar.fill")
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal)
+                    }
+                    .frame(maxWidth: 200, maxHeight: .infinity) // Stretch!
+                    .glassEffect(.clear.interactive())
                 }
-                .frame(maxWidth: 200, maxHeight: .infinity) // Stretch!
-                .glassEffect(.clear.interactive())
+            }
+            .tint(.primary)
+            .frame(height: 160)
+            .sensoryFeedback(.impact(weight: .heavy), trigger: haptics)
+            .navigationDestination(item: $navRoute) { route in
+                switch route {
+                case .budgets:  BudgetView()
+                case .insights: InsightsView()
+                }
             }
         }
-        .tint(.primary)
-        .frame(height: 160)
-        .sensoryFeedback(.impact(weight: .heavy), trigger: haptics)
-        
         .sheet(isPresented: $netTotalSheet) {
             NavigationStack {
-                Text(netTotal, format: .currency(code: currencyCode))
-                    .font(Font.largeTitle.bold())
-                    .presentationDetents([.fraction(0.2)])
-                    .navigationTitle("Net Total")
-                    .toolbarTitleDisplayMode(.inline)
+                List {
+                    Section {
+                        HStack {
+                            Text("Net Total")
+                                .font(.headline)
+                            Spacer()
+                            Text(netTotal, format: .currency(code: currencyCode))
+                                .font(.headline)
+                                .monospacedDigit()
+                                .foregroundStyle(totalColor)
+                        }
+                    }
+
+                    if let breakdown {
+                        ForEach(breakdown.groups) { group in
+                            Section {
+                                ForEach(group.items.filter { abs($0.value) >= 0.005 }) { item in
+                                    HStack {
+                                        Text(item.label)
+                                        Spacer()
+                                        Text(item.value, format: .currency(code: currencyCode))
+                                            .monospacedDigit()
+                                            .foregroundStyle(item.value < 0 ? Color.red : .primary)
+                                    }
+                                }
+                            } header: {
+                                HStack {
+                                    Text(group.title)
+                                    Spacer()
+                                    Text(group.subtotal, format: .currency(code: currencyCode))
+                                        .monospacedDigit()
+                                }
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium, .large])
+                .navigationTitle("Net Total")
+                .toolbarTitleDisplayMode(.inline)
             }
-        }
-        .sheet(isPresented: $netIncomeSheet) {
-            NavigationStack {
-                Text(netIncome, format: .currency(code: currencyCode))
-                    .font(Font.largeTitle.bold())
-                    .presentationDetents([.fraction(0.2)])
-                    .navigationTitle("Net Income")
-                    .toolbarTitleDisplayMode(.inline)
-            }
-        }
-        .sheet(isPresented: $netExpensesSheet) {
-            NavigationStack {
-                Text(netExpenses, format: .currency(code: currencyCode))
-                    .font(Font.largeTitle.bold())
-                    .presentationDetents([.fraction(0.2)])
-                    .navigationTitle("Net Expenses")
-                    .toolbarTitleDisplayMode(.inline)
-            }
+            .task { breakdown = computeBreakdown() }
         }
     }
 }

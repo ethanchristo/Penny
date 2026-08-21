@@ -19,7 +19,6 @@ struct HomeView: View {
     @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
     @AppStorage("currency_symbol", store: .group) private var currencySymbol: String = "$"
     @AppStorage("user_yellow_threshhold", store: .group) private var yellowThreshold: Double = 100.0
-    @AppStorage("show_insights") private var showInsights: Bool = true
 
     @Environment(\.scenePhase) var scenePhase
     @Environment(\.modelContext) var modelContext
@@ -29,7 +28,7 @@ struct HomeView: View {
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
     @Query private var accounts: [Account]
     @Query private var categories: [Category]
-    @Query private var funds: [Fund]
+    @Query private var budgets: [Budget]
 
     @State private var stats = HomeStats()
     /// The windowed + sorted transactions shown in the list, cached so the window
@@ -47,19 +46,8 @@ struct HomeView: View {
     @State private var settingsSheet = false
     @State private var showAddTransaction = false
 
-    /// Value-based navigation path for pushes from the Home screen.
-    @State private var path = NavigationPath()
-
-    @State private var haptics: Int = 0
-
     private enum CustomSortOrder {
         case dateReverse, dateForward, aToZ, zToA
-    }
-
-    /// Destinations reachable from the Home screen, driven through `path`.
-    private enum HomeRoute: Hashable {
-        case budgets
-        case funds
     }
 
     private var backgroundColor: Color {
@@ -111,7 +99,7 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             ScrollView {
                 NetTotalView(
                     selectedTimeRange: $selectedTimeRange,
@@ -129,55 +117,21 @@ struct HomeView: View {
                 )
                 .padding(.top)
                 .padding(.horizontal, 24)
-                
-                HStack {
-                    Button {
-                        haptics += 1
-                        path.append(HomeRoute.budgets)
-                    } label: {
-                        HStack {
-                            Label("Budgets", systemImage: "chart.bar.fill")
-                                .lineLimit(1)
 
-                            Spacer()
-
-
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.headline)
-                        .tint(.primary)
-                        .padding(24)
-                        .frame(height: 72)
-                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
-                    }
-
-                    Button {
-                        haptics += 1
-                        path.append(HomeRoute.funds)
-                    } label: {
-                        HStack {
-                            Label("Funds", systemImage: "rectangle.stack.fill")
-                                .lineLimit(1)
-                            
-                            Spacer()
-                            
-                            
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.headline)
-                        .tint(.primary)
-                        .padding(24)
-                        .frame(height: 72)
-                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
-                    }
-                    
-                }
-                .sensoryFeedback(.impact, trigger: haptics)
-                .padding(.top, 20)
-                .padding(.bottom, 8)
+                BudgetSummaryView(
+                    categories: categories,
+                    budgets: budgets,
+                    transactions: transactions,
+                    netTotal: stats.netTotal
+                )
+                .padding(.top, 16)
                 .padding(.horizontal, 24)
+
+                SquigglyLine(wavelength: 16, amplitude: 2)
+                    .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .frame(height: 12) // Height should accommodate the amplitude
+                    .padding(.horizontal)
+                    .padding(.top, 16)
                 
                 TransactionFilteredView(
                     editingTransaction: $editingTransaction,
@@ -192,16 +146,6 @@ struct HomeView: View {
                     filterCategory: filterCategory,
                     filterIsIncome: filterIsIncome
                 )
-                
-                if showInsights {
-                    SquigglyLine(wavelength: 16, amplitude: 2)
-                        .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                        .frame(height: 12) // Height should accommodate the amplitude
-                        .padding(.horizontal)
-                        .padding(.top, 12)
-                    
-                    InsightsView()
-                }
             }
             .background {
                 LinearGradient(
@@ -212,12 +156,6 @@ struct HomeView: View {
                 .ignoresSafeArea()
             }
             .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
-            .navigationDestination(for: HomeRoute.self) { route in
-                switch route {
-                case .budgets:  BudgetView()
-                case .funds:    FundView()
-                }
-            }
             .navigationTitle("Overview")
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
@@ -272,14 +210,14 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showAddTransaction) {
             NavigationStack {
-                SingleTransactionView(initialEditMode: true, transaction: nil , category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: true, transaction: nil , category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: "addTransaction", in: namespace))
 
         }
         .sheet(item: $editingTransaction) { transaction in
             NavigationStack {
-                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
         }
@@ -308,7 +246,7 @@ struct HomeView: View {
             hasher.combine(balance)
         }
         hasher.combine(transactionsFingerprint(transactions))
-        hasher.combine(fundsFingerprint(funds))
+        hasher.combine(budgetsFingerprint(budgets))
         return hasher.finalize()
     }
 
@@ -456,5 +394,212 @@ struct HomeView: View {
         }
 
         try? modelContext.save()
+    }
+}
+
+/// A compact glass card under the net total that reconciles budget overspending
+/// against the money the user has to spend. The "spendable pool" is the overall
+/// budget's remaining amount when the overall budget is on, otherwise the net total —
+/// so the summary answers "what's left, and can it cover where I went over?".
+struct BudgetSummaryView: View {
+    @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(OverallBudget.self) private var overallBudget
+
+    let categories: [Category]
+    let budgets: [Budget]
+    let transactions: [Transaction]
+    let netTotal: Double
+
+    /// One overspent budget (category or freestanding) with the amount it's over by.
+    private struct OverspentBudget: Identifiable {
+        let id: String
+        let symbol: String
+        let name: String
+        let over: Double
+    }
+
+    /// Every budget currently spent past its limit, biggest overage first.
+    private var overspentBudgets: [OverspentBudget] {
+        var results: [OverspentBudget] = []
+
+        // Category budgets — spend for the current window vs. the category's limit.
+        for category in categories {
+            guard let budget = category.budget, budget.hasBudget, !budget.isFreestanding else { continue }
+            let limit = budget.amount
+            guard limit > 0 else { continue }
+            let spent = budgetTotal(for: category, in: transactions, by: 0)
+            if spent > limit {
+                results.append(.init(id: "cat-\(category.id)",
+                                     symbol: category.symbol,
+                                     name: category.name,
+                                     over: spent - limit))
+            }
+        }
+
+        // Freestanding budgets already track their own remaining balance.
+        for budget in budgets where budget.hasBudget && budget.isFreestanding {
+            if budget.remaining < 0 {
+                results.append(.init(id: "budget-\(budget.id)",
+                                     symbol: budget.displaySymbol,
+                                     name: budget.displayName,
+                                     over: -budget.remaining))
+            }
+        }
+
+        return results.sorted { $0.over > $1.over }
+    }
+
+    private var totalOverspent: Double {
+        overspentBudgets.reduce(0) { $0 + $1.over }
+    }
+
+    /// Whether the reconciliation uses the overall budget (on) or the net total (off).
+    private var usingOverall: Bool { overallBudget.isEnabled }
+
+    /// The money available to spend: overall budget remaining, or the net total.
+    private var availableAmount: Double {
+        usingOverall
+            ? overallBudget.budget - overallBudgetTotal(for: overallBudget, in: transactions, by: 0)
+            : netTotal
+    }
+
+    private var availableSubtitle: String {
+        if usingOverall {
+            let window = budgetWindowText(from: overallBudget.budgetWindow)
+            return availableAmount >= 0
+                ? "left in your overall budget \(window)"
+                : "over your overall budget \(window)"
+        } else {
+            return availableAmount >= 0
+                ? "net total available to spend"
+                : "your net total is in the red"
+        }
+    }
+
+    /// Reconciles the overspend against the spendable pool: how much you'd have left
+    /// after covering it, or how far short you'd fall.
+    private var reconciliationText: String {
+        let count = overspentBudgets.count
+        let noun = count == 1 ? "budget" : "budgets"
+        let source = usingOverall ? "budget" : "net total"
+        let overStr = totalOverspent.formatted(.currency(code: currencyCode))
+
+        let head = "You've overspent \(overStr) across \(count) \(noun)."
+        let after = availableAmount - totalOverspent
+        if after >= 0 {
+            return head + " Covering it from your \(source) leaves \(after.formatted(.currency(code: currencyCode)))."
+        } else {
+            return head + " That's \(abs(after).formatted(.currency(code: currencyCode))) more than your \(source)."
+        }
+    }
+
+    private var amountColor: Color {
+        let base: Color = availableAmount < 0 ? Color(.systemRed) : Color(.systemGreen)
+        return colorScheme == .dark ? base.mix(with: .white, by: 0.4) : base.mix(with: .black, by: 0.3)
+    }
+
+    /// What's genuinely free to use: the spendable pool minus anything needed to cover
+    /// overspending. Drives the "ideas" nudge so it only shows when there's real money left.
+    private var spendableLeftover: Double {
+        availableAmount - totalOverspent
+    }
+
+    /// Friendly ways to put a positive leftover to work. Purely suggestive — tapping
+    /// one just closes the nudge, so it never records a transaction on its own.
+    private struct SpendIdea: Identifiable {
+        var id: String { title }
+        let title: String
+        let systemImage: String
+    }
+
+    private let spendIdeas: [SpendIdea] = [
+        .init(title: "Save it", systemImage: "building.columns.fill"),
+        .init(title: "Invest it", systemImage: "chart.line.uptrend.xyaxis"),
+        .init(title: "Treat yourself", systemImage: "gift.fill"),
+        .init(title: "Share with friends", systemImage: "person.2.fill")
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Summary", systemImage: "sparkles")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(availableAmount, format: .currency(code: currencyCode))
+                    .font(.title.bold())
+                    .monospacedDigit()
+                    .foregroundStyle(amountColor)
+                    .contentTransition(.numericText())
+
+                Text(availableSubtitle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            if overspentBudgets.isEmpty {
+                Label("All budgets are on track", systemImage: "checkmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .symbolRenderingMode(.multicolor)
+            } else {
+                Divider().opacity(0.4)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Overspent")
+                        .font(.subheadline.weight(.semibold))
+
+                    ForEach(overspentBudgets) { item in
+                        HStack(spacing: 8) {
+                            Text(item.symbol)
+                            Text(item.name)
+                                .lineLimit(1)
+                            Spacer()
+                            Text(item.over, format: .currency(code: currencyCode))
+                                .monospacedDigit()
+                                .foregroundStyle(.red)
+                        }
+                        .font(.subheadline)
+                    }
+
+                    Text(reconciliationText)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if spendableLeftover > 0 {
+                Divider().opacity(0.4)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Ideas to make it count")
+                        .font(.subheadline.weight(.semibold))
+
+                    Text("You've got \(spendableLeftover.formatted(.currency(code: currencyCode))) free — put it to work.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 8) {
+                            ForEach(spendIdeas) { idea in
+                                Label(idea.title, systemImage: idea.systemImage)
+                                    .font(.caption.weight(.medium))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                            }
+                        }
+                    }
+                    .scrollIndicators(.hidden)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 36))
     }
 }

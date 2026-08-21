@@ -12,21 +12,6 @@ import AppIntents
 
 @available(iOS 27.0, *)
 @AppIntent(schema: .system.open)
-struct OpenFundIntent: OpenIntent {
-    static let title: LocalizedStringResource = "Open Fund"
-    
-    @Parameter(title: "Fund")
-    var target: FundEntity
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        AppRouter.shared.openFund(id: target.id)
-        return .result()
-    }
-}
-
-@available(iOS 27.0, *)
-@AppIntent(schema: .system.open)
 struct OpenBudgetIntent: OpenIntent {
     static let title: LocalizedStringResource = "Open Budget"
     

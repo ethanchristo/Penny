@@ -45,7 +45,7 @@ struct TransactionEntity: AppEntity {
         // the @Property wrappers, since those go through a setter that requires
         // `self` to be fully initialized.
         self.id = transaction.id
-        self.tagName = transaction.category?.name ?? transaction.fund?.name ?? ""
+        self.tagName = transaction.category?.name ?? transaction.budget?.name ?? ""
         self.amount = transaction.amount
         self.isIncome = transaction.isIncome
         self.date = transaction.date
@@ -77,7 +77,7 @@ struct TransactionQuery: EntityStringQuery {
             predicate: #Predicate { transaction in
                 transaction.notes.localizedStandardContains(string) ||
                 (transaction.categoryValue?.name.localizedStandardContains(string) ?? false) ||
-                (transaction.fundValue?.name.localizedStandardContains(string) ?? false)
+                (transaction.budgetValue?.name.localizedStandardContains(string) ?? false)
             },
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )

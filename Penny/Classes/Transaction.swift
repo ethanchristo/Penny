@@ -49,32 +49,33 @@ class Transaction {
     var date: Date = Date.now
     var account: Account? = nil
 
-    // MARK: - Category / Fund (mutually exclusive)
-    // A transaction is tagged with EITHER a category OR a fund, never both.
+    // MARK: - Category / Budget (mutually exclusive)
+    // A transaction is tagged with EITHER a category OR a (freestanding) budget, never both.
     //
-    // `categoryValue` and `fundValue` are the actual SwiftData-persisted
-    // properties (and the targets of the inverse relationships on Category/Fund).
-    // The public `category` / `fund` computed properties below wrap them so the
-    // exclusivity rule is enforced everywhere they're assigned. We can't use a
-    // `didSet` observer for this because SwiftData silently ignores property
-    // observers on @Model types — the setter is the supported place to do it.
+    // `categoryValue` / `budgetValue` are the actual SwiftData-persisted properties (and
+    // the targets of the inverse relationships on Category/Budget). The public
+    // `category` / `budget` computed properties below wrap them so the exclusivity rule is
+    // enforced everywhere they're assigned. We can't use a `didSet` observer for this
+    // because SwiftData silently ignores property observers on @Model types — the setter
+    // is the supported place to do it.
     var categoryValue: Category?
-    var fundValue: Fund?
+    var budgetValue: Budget?
 
     var category: Category? {
         get { categoryValue }
         set {
             categoryValue = newValue
-            // Choosing a category clears any fund so they can't both be set.
-            if newValue != nil { fundValue = nil }
+            // Choosing a category clears any budget so they can't both be set.
+            if newValue != nil { budgetValue = nil }
         }
     }
 
-    var fund: Fund? {
-        get { fundValue }
+    /// The freestanding budget this transaction is tagged to.
+    var budget: Budget? {
+        get { budgetValue }
         set {
-            fundValue = newValue
-            // Choosing a fund clears any category so they can't both be set.
+            budgetValue = newValue
+            // Choosing a budget clears any category so they can't both be set.
             if newValue != nil { categoryValue = nil }
         }
     }
@@ -123,19 +124,19 @@ class Transaction {
         return next
     }
     
-    init(amount: Double = 0.00, isIncome: Bool = false, date: Date = .now, account: Account? = nil, category: Category? = nil, fund: Fund? = nil,notes: String = "", recurrence: Recurrence = .none, endDate: Date? = nil, externalID: String? = nil) {
+    init(amount: Double = 0.00, isIncome: Bool = false, date: Date = .now, account: Account? = nil, category: Category? = nil, budget: Budget? = nil, notes: String = "", recurrence: Recurrence = .none, endDate: Date? = nil, externalID: String? = nil) {
         self.amount = amount
         self.isIncome = isIncome
         self.date = date
         self.account = account
-        // Enforce category/fund exclusivity at creation. If both are somehow
-        // supplied, the fund wins and the category is dropped.
-        if fund != nil {
-            self.fundValue = fund
+        // Enforce category/budget exclusivity at creation. If both are somehow supplied,
+        // the freestanding budget wins over the category.
+        if budget != nil {
+            self.budgetValue = budget
             self.categoryValue = nil
         } else {
             self.categoryValue = category
-            self.fundValue = nil
+            self.budgetValue = nil
         }
         self.notes = notes
         self.recurrence = recurrence

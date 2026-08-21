@@ -24,22 +24,22 @@ func categoriedTransactions(for transactions: [Transaction], with category: Cate
 nonisolated func typedTransactions(for transactions: [Transaction], income: Bool?, fund: Bool = false ) -> [Transaction] {
     if income == true {
         if !fund  {
-            transactions.filter { $0.isIncome && $0.fund == nil }
+            transactions.filter { $0.isIncome && $0.budget == nil }
         } else {
-            // Include both non-fund income and fund contributions (both are `isIncome`).
+            // Include both plain income and budget contributions (both are `isIncome`).
             transactions.filter { $0.isIncome }
         }
     } else if income == false {
         if !fund {
-            transactions.filter { !$0.isIncome && $0.fund == nil }
+            transactions.filter { !$0.isIncome && $0.budget == nil }
         } else {
-            // Include both non-fund expenses and fund uses (both are `!isIncome`).
+            // Include both plain expenses and budget uses (both are `!isIncome`).
             transactions.filter { !$0.isIncome }
         }
     } else {
         if !fund {
             transactions
-                .filter { $0.fund == nil }
+                .filter { $0.budget == nil }
         } else {
             transactions
         }
@@ -153,25 +153,42 @@ func occurs(_ transaction: Transaction, from start: Date, to end: Date, calendar
 }
 
 // MARK: - Total Calculations
-/// Windowed sum of the non-fund `transactions` (income adds, expense subtracts).
-/// ALL fund transactions are skipped here — funds are reconciled in aggregate by
-/// `fundNetAdjustment()` so their impact lands on the net total exactly once,
-/// independent of the selected window and never on the income/expense breakdowns.
-nonisolated func calculateTotal(for transactions: [Transaction], start: Date, end: Date) -> Double {
+/// Windowed sum of the non-reserved `transactions` (income adds, expense subtracts).
+/// Transactions tagged to a freestanding budget, and those in a pre-funded category, are
+/// skipped here — those budgets are reconciled in aggregate by `budgetNetAdjustment()` so
+/// their impact lands on the net total exactly once, independent of the selected window and
+/// never on the income/expense breakdowns. Ordinary category spending is NOT skipped — it
+/// flows through as normal spending.
+/// Pass `includeReserved: true` to count reserved (budget-tagged / pre-funded-category)
+/// spending at face value instead of skipping it. The net total uses this so an account's
+/// value reflects ALL its spending; the reserve then covers only the *unspent* remainder
+/// (see `budgetReserveRemainingItems`), avoiding the double-count the old skip-plus-full-
+/// reserve model produced.
+nonisolated func calculateTotal(for transactions: [Transaction], start: Date, end: Date, includeReserved: Bool = false) -> Double {
 
     let savingsTotalEnabled = UserDefaults.group.object(forKey: "savings_total") as? Bool ?? false
     let calendar = Calendar.current
 
     let transactionTotal = transactions.reduce(0.0) { total, transaction in
+        // Transactions reconciled in aggregate by the budget reserve rather than the
+        // windowed running total: those tagged to a freestanding budget, and those in a
+        // category whose budget is pre-funded (an envelope that behaves like a fund).
+        let inPreFundedCategory = transaction.category?.budget.map { $0.hasBudget && $0.preFunding } ?? false
+        let isReserved = transaction.budgetValue != nil || inPreFundedCategory
+
         // Skip only NORMAL savings transactions when the savings total is off.
-        if transaction.fund == nil, transaction.account?.accountType == .savings, !savingsTotalEnabled {
+        if !isReserved, transaction.account?.accountType == .savings, !savingsTotalEnabled {
             return total
         }
 
-        // Every fund transaction — contributions and uses, pre-allocate or not — is
-        // reconciled in aggregate by fundNetAdjustment(), so none of them move the
-        // windowed running total here.
-        if transaction.fund != nil { return total }
+        // Reserved transactions are normally reconciled by the budget reserve, so they
+        // don't move the running total — unless the caller wants them counted at face
+        // value (the net total, so the reserve can cover only the unspent remainder).
+        // A freestanding-budget *contribution* (income tagged directly to a budget) stays
+        // excluded even then: it's a virtual earmark of money already on hand, not a new
+        // deposit, so counting it would inflate the account's value.
+        let isContribution = transaction.budgetValue != nil && transaction.isIncome
+        if isReserved && (!includeReserved || isContribution) { return total }
 
         let multiplier = occurrenceCount(of: transaction, from: start, to: end, calendar: calendar)
         let amount = abs(transaction.amount) * Double(multiplier)
@@ -212,42 +229,63 @@ nonisolated func calculateTotal(for transactions: [Transaction], start: Date, en
     }
 }
 
-/// The aggregate fund reserve applied to the net total. Every fund's own transactions
-/// are skipped in `calculateTotal`; this reconciles them so money set aside affects the
-/// net total. Per fund the amount reserved (subtracted by the caller) is:
-///   • pre-allocate: max(goal, used) — the full goal is removed from the net total, and
-///     only spending *over* the goal eats further (goal + max(0, used − goal)).
-///   • non-pre-allocate: max(contributed, used) — contributions are set aside and a use
+/// The aggregate reserve applied to the net total by **freestanding** budgets. Their own
+/// transactions are skipped in `calculateTotal`; this reconciles them so money set aside
+/// affects the net total. Category budgets are ignored here — their spend already flows
+/// through the net total normally. Per freestanding budget the amount reserved (subtracted
+/// by the caller) is:
+///   • pre-funded: max(amount, used) — the full amount is removed from the net total, and
+///     only spending *over* the amount eats further (amount + max(0, used − amount)).
+///   • contribute-toward: max(contributed, used) — contributions are set aside and a use
 ///     only bites once it exceeds what was contributed.
 /// Subtracted from the *net total only* (`isIncome == nil`), once, never on the
 /// income/expense breakdowns.
-/// Pure, nonisolated core: the aggregate reserve for an explicit set of funds. Being
+/// Pure, nonisolated core: the aggregate reserve for an explicit set of budgets. Being
 /// nonisolated lets it run on a background `ModelActor` as well as on the main thread.
-nonisolated func fundReserveTotal(for funds: [Fund]) -> Double {
-    funds.reduce(0.0) { sum, fund in
-        let reserved = fund.preAllocate
-            ? max(fund.goal, fund.used)
-            : max(fund.contributed, fund.used)
-        return sum + reserved
+nonisolated func budgetReserveTotal(for budgets: [Budget]) -> Double {
+    budgetReserveItems(for: budgets).reduce(0.0) { $0 + $1.reserved }
+}
+
+/// Per-budget breakdown of `budgetReserveTotal`: the amount each budget reserves against
+/// the net total, skipping budgets that reserve nothing. `budgetReserveTotal` is just the
+/// sum of these, so the itemized display can never disagree with the applied reserve.
+nonisolated func budgetReserveItems(for budgets: [Budget]) -> [(budget: Budget, reserved: Double)] {
+    budgets.compactMap { budget in
+        guard budget.hasBudget else { return nil }
+
+        if budget.isFreestanding {
+            let reserved = budget.preFunding
+                ? max(budget.amount, budget.used)
+                : max(budget.contributed, budget.used)
+            return (budget, reserved)
+        } else {
+            // Category budgets reserve only when pre-funded. Their category's transactions
+            // are excluded from the running total (see calculateTotal), so reconcile them
+            // exactly like a pre-funded fund: max(amount, all-time category spend).
+            guard budget.preFunding else { return nil }
+            let categorySpend = (budget.category?.transactions ?? [])
+                .reduce(0.0) { $1.isIncome ? $0 : $0 + abs($1.amount) }
+            return (budget, max(budget.amount, categorySpend))
+        }
     }
 }
 
-/// Main-thread convenience: prefers the caller's already-loaded funds (the app passes
-/// its `@Query` funds) to avoid a fetch on every render, falling back to fetching the
-/// shared container when none are supplied (the charts call this without funds in hand).
-@MainActor func fundNetAdjustment(funds: [Fund]? = nil) -> Double {
-    let allFunds = funds ?? (try? SharedDatabase.shared.container.mainContext.fetch(FetchDescriptor<Fund>())) ?? []
-    return fundReserveTotal(for: allFunds)
+/// Main-thread convenience: prefers the caller's already-loaded budgets (the app passes
+/// its `@Query` budgets) to avoid a fetch on every render, falling back to fetching the
+/// shared container when none are supplied (the charts call this without budgets in hand).
+@MainActor func budgetNetAdjustment(budgets: [Budget]? = nil) -> Double {
+    let allBudgets = budgets ?? (try? SharedDatabase.shared.container.mainContext.fetch(FetchDescriptor<Budget>())) ?? []
+    return budgetReserveTotal(for: allBudgets)
 }
 
-@MainActor func netTotalType(for transactions: [Transaction], use accounts: [Account]? = nil, funds: [Fund]? = nil, isIncome: Bool? = nil, in selectedTimeRange: HomeTimeRange, offset: Int, type: CreditCardBalanceType) -> Double {
+@MainActor func netTotalType(for transactions: [Transaction], use accounts: [Account]? = nil, budgets: [Budget]? = nil, isIncome: Bool? = nil, in selectedTimeRange: HomeTimeRange, offset: Int, type: CreditCardBalanceType) -> Double {
 
     if type == .statement {
-        return netTotalCardStatement(for: transactions, isIncome: isIncome, with: accounts ?? [], funds: funds, in: selectedTimeRange)
+        return netTotalCardStatement(for: transactions, isIncome: isIncome, with: accounts ?? [], budgets: budgets, in: selectedTimeRange)
     } else if type == .balance {
-        return netTotalCardBalance(for: transactions, isIncome: isIncome, with: accounts ?? [], funds: funds, in: selectedTimeRange)
+        return netTotalCardBalance(for: transactions, isIncome: isIncome, with: accounts ?? [], budgets: budgets, in: selectedTimeRange)
     } else {
-        return netTotalAmount(for: transactions, isIncome: isIncome, funds: funds, in: selectedTimeRange, offset: offset)
+        return netTotalAmount(for: transactions, isIncome: isIncome, budgets: budgets, in: selectedTimeRange, offset: offset)
     }
 }
 
@@ -385,13 +423,13 @@ nonisolated func payPeriodBounds(containing date: Date = .now, offset: Int = 0) 
     return calculateTotal(for: transactions, start: bounds.start, end: bounds.end)
 }
 
-@MainActor func netTotalAmount(for transactions: [Transaction], isIncome: Bool?, funds: [Fund]? = nil, in selectedTimeRange: HomeTimeRange, offset: Int) -> Double {
+@MainActor func netTotalAmount(for transactions: [Transaction], isIncome: Bool?, budgets: [Budget]? = nil, in selectedTimeRange: HomeTimeRange, offset: Int) -> Double {
     let filtered = typedTransactions(for: transactions, income: isIncome)
     let total = windowTotal(for: filtered, in: selectedTimeRange, offset: offset)
 
-    // Apply the fund adjustment only to the aggregate net total (isIncome == nil),
+    // Apply the budget reserve only to the aggregate net total (isIncome == nil),
     // never to the income/expense breakdowns.
-    return isIncome == nil ? total - fundNetAdjustment(funds: funds) : total
+    return isIncome == nil ? total - budgetNetAdjustment(budgets: budgets) : total
 }
 
 /// The all-time net total (or income/expense breakdown) for the home tab, decoupled
@@ -401,9 +439,9 @@ nonisolated func payPeriodBounds(containing date: Date = .now, offset: Int = 0) 
 /// paycheck are reflected. Future one-time transactions are never included. The fund
 /// reserve is applied once, to the net total only.
 /// Nonisolated so it can run on a background `ModelActor` (see `StatsCalculator`) as
-/// well as the main thread. `funds` is required — the caller passes the funds fetched
+/// well as the main thread. `budgets` is required — the caller passes the budgets fetched
 /// from the same context as `transactions`, so no context-crossing fetch is needed.
-nonisolated func netTotalAllTime(for transactions: [Transaction], isIncome: Bool?, funds: [Fund]) -> Double {
+nonisolated func netTotalAllTime(for transactions: [Transaction], isIncome: Bool?, budgets: [Budget]) -> Double {
     let includeUpcoming = UserDefaults.group.object(forKey: "net_total_include_upcoming") as? Bool ?? true
     let filtered = typedTransactions(for: transactions, income: isIncome)
 
@@ -417,7 +455,7 @@ nonisolated func netTotalAllTime(for transactions: [Transaction], isIncome: Bool
     var total = calculateTotal(for: nonRecurring, start: .distantPast, end: now)
     total += calculateTotal(for: recurring, start: .distantPast, end: recurringEnd)
 
-    return isIncome == nil ? total - fundReserveTotal(for: funds) : total
+    return isIncome == nil ? total - budgetReserveTotal(for: budgets) : total
 }
 
 /// Amount owed on a single credit card, from its own transactions and its
@@ -425,7 +463,7 @@ nonisolated func netTotalAllTime(for transactions: [Transaction], isIncome: Bool
 /// due date); `total` is the full outstanding balance (all-time net — the seeded
 /// opening balance makes this the real current balance). Both positive when owed.
 /// Nonisolated so it can run on the background `StatsCalculator`.
-nonisolated func creditCardOwed(for card: Account, transactions: [Transaction]) -> (due: Double, total: Double) {
+nonisolated func creditCardOwed(for card: Account, transactions: [Transaction], includeReserved: Bool = false) -> (due: Double, total: Double) {
     let calendar = Calendar.current
     let now = Date.now
     let cardTransactions = transactions.filter { $0.account == card }
@@ -451,35 +489,103 @@ nonisolated func creditCardOwed(for card: Account, transactions: [Transaction]) 
 
     // `calculateTotal` returns income − expense, so spending is negative; flip the
     // sign so an amount owed reads positive.
-    let due = -calculateTotal(for: statementTxns, start: periodStart, end: close.endOfDay)
-    let total = -calculateTotal(for: cardTransactions, start: .distantPast, end: now.endOfDay)
+    let due = -calculateTotal(for: statementTxns, start: periodStart, end: close.endOfDay, includeReserved: includeReserved)
+    let total = -calculateTotal(for: cardTransactions, start: .distantPast, end: now.endOfDay, includeReserved: includeReserved)
     return (due, total)
 }
 
-/// Total of fund *use* (spending) transactions in `transactions`. These are real
-/// outflows already reflected in a SimpleFIN balance, but `calculateTotal` excludes
-/// all fund transactions (funds are reconciled once via `fundReserveTotal`). Adding
-/// this back to a SimpleFIN balance converts it to the fund-excluded basis the
-/// reserve expects, so fund spending isn't counted twice (once in the live balance,
-/// once in the reserve). Fund *contributions* are treated as virtual earmarks of
-/// existing money — not new deposits — so they are deliberately NOT added back,
-/// matching how the transaction-derived total already treats them.
-nonisolated func fundUseTotal(in transactions: [Transaction]) -> Double {
-    transactions.reduce(0.0) { sum, txn in
-        (txn.fund != nil && !txn.isIncome) ? sum + abs(txn.amount) : sum
+/// Per-budget "reserve remaining" for the net total — the still-unspent portion of each
+/// budget's set-aside money, applied as ONE global adjustment (never tied to a specific
+/// card). Actual spending is reflected by the account/card balances themselves (the net
+/// total counts reserved transactions at face value via `calculateTotal(includeReserved:)`),
+/// so the reserve covers only what hasn't been utilized yet: `max(0, target - used)`.
+///
+///   • **Pre-funded** budget (freestanding or category): `target = amount`. Starts fully
+///     reserved (`amount` when nothing's spent) and shrinks as utilization grows, hitting
+///     0 once spending reaches the amount — past that the balances alone carry the spend.
+///   • **Contribution** budget (freestanding, not pre-funded): `target = contributed`.
+///     The contributed money is reserved, reduced by any utilization, and only counts
+///     while contributions exceed use (`max(0, contributed - used)`).
+///   • **Plain category** budget (not pre-funded): reserves nothing.
+///
+/// Skips budgets that reserve nothing so the itemized breakdown stays tidy.
+nonisolated func budgetReserveRemainingItems(for budgets: [Budget]) -> [(budget: Budget, reserved: Double)] {
+    budgets.compactMap { budget in
+        guard budget.hasBudget else { return nil }
+
+        let target: Double
+        let used: Double
+        if budget.isFreestanding {
+            target = budget.preFunding ? budget.amount : budget.contributed
+            used = budget.used
+        } else {
+            // Category budgets reserve only when pre-funded; their spend is the category's
+            // all-time expenses (its transactions are counted in the net total normally).
+            guard budget.preFunding else { return nil }
+            target = budget.amount
+            used = (budget.category?.transactions ?? [])
+                .reduce(0.0) { $1.isIncome ? $0 : $0 + abs($1.amount) }
+        }
+
+        let reserved = max(0, target - used)
+        return reserved > 0 ? (budget, reserved) : nil
     }
+}
+
+/// Aggregate net-total reserve: the sum of every budget's unspent reservation.
+nonisolated func budgetReserveRemainingTotal(for budgets: [Budget]) -> Double {
+    budgetReserveRemainingItems(for: budgets).reduce(0.0) { $0 + $1.reserved }
+}
+
+/// The fully itemized components that sum to the home/widget/Siri net total, so the UI
+/// can show *exactly where the number came from* — one row per account, per card, per
+/// upcoming recurring transaction, and per reserving budget. Each `value` already carries
+/// its sign, so every item and every group subtotal adds up to `total` directly.
+/// `Sendable`/plain values so the whole thing can cross back from `StatsCalculator`.
+struct NetTotalBreakdown: Sendable {
+    /// A single signed line. `value` is its signed contribution to the net total.
+    struct Item: Sendable, Identifiable {
+        let id: String
+        let label: String
+        let value: Double
+    }
+
+    /// A named collection of items (e.g. every account) with its own subtotal.
+    struct Group: Sendable, Identifiable {
+        let id: String
+        let title: String
+        let items: [Item]
+        nonisolated var subtotal: Double { items.reduce(0) { $0 + $1.value } }
+    }
+
+    var groups: [Group] = []
+    nonisolated var total: Double { groups.reduce(0) { $0 + $1.subtotal } }
 }
 
 /// The credit-card-aware home/widget/Siri net total: assets (checking + debit +
 /// savings-if-enabled) − credit-card debt − fund reserve, all-time and optionally
-/// extended to the next payday for recurring transactions.
+/// extended to the next payday for recurring transactions. Thin wrapper over
+/// `netTotalBreakdown` so the displayed total and its breakdown can never drift.
+nonisolated func netTotalAggregate(for transactions: [Transaction], budgets: [Budget]) -> Double {
+    netTotalBreakdown(for: transactions, budgets: budgets).total
+}
+
+/// Same computation as `netTotalAggregate`, but returns the individual components
+/// (assets, credit debt, upcoming recurring, budget reserve) that sum to the total.
+///
+/// Reserve model: each account/card contributes its FULL value (all spending included),
+/// and budgets are reconciled by ONE global reserve of their unspent set-aside money
+/// (`budgetReserveRemainingItems`). A pre-funded budget starts fully reserved and its
+/// reservation shrinks as it's spent (utilization is already reflected in the balances),
+/// reaching 0 once spending meets the amount; a contribution budget reserves
+/// `max(0, contributed − used)`. Nothing is tied to a specific card.
 ///
 /// Credit cards count per the `net_total_credit_mode` setting — `.balance` subtracts
 /// each card's full outstanding balance, `.statement` subtracts only its last closed
-/// statement (amount due). When SimpleFIN has reported a live balance for an account
+/// statement (amount due). When a bank sync has reported a live balance for an account
 /// it is the source of truth (checking included); otherwise the figure is derived
 /// from that account's transactions. Nonisolated so it runs on `StatsCalculator`.
-nonisolated func netTotalAggregate(for transactions: [Transaction], funds: [Fund]) -> Double {
+nonisolated func netTotalBreakdown(for transactions: [Transaction], budgets: [Budget]) -> NetTotalBreakdown {
     let defaults = UserDefaults.group
     let mode = CreditCardBalanceType(rawValue: defaults.string(forKey: "net_total_credit_mode") ?? "") ?? .balance
     let includeUpcoming = defaults.object(forKey: "net_total_include_upcoming") as? Bool ?? true
@@ -499,71 +605,113 @@ nonisolated func netTotalAggregate(for transactions: [Transaction], funds: [Fund
     let creditTxns = transactions.filter { $0.account?.accountType == .credit }
     let nonCreditTxns = transactions.filter { $0.account?.accountType != .credit }
 
-    // MARK: Assets — prefer SimpleFIN's live balance per account, else the
-    // transaction-derived all-time total (which already honors the savings toggle).
-    var assets: Double = 0
+    // MARK: Assets — one item per account, preferring the bank-sync live balance,
+    // else the transaction-derived all-time total. Both reflect the account's FULL value
+    // (budget/reserved spending included); the reserve below covers only the unspent
+    // remainder, so nothing is double-counted.
+    var assetItems: [NetTotalBreakdown.Item] = []
 
-    // Primary checking (account == nil) maps to the designated SimpleFIN checkingID.
+    // Primary checking (account == nil) maps to the designated live-balance checkingID.
     let checkingTxns = nonCreditTxns.filter { $0.account == nil }
+    let checkingValue: Double
     if let checkingID, let balance = balances[checkingID] {
-        // Add back fund spending already baked into the live balance so it isn't
-        // double-counted against the fund reserve below. `abs` guards against a
-        // source reporting a signed balance (e.g. Apple Card comes through negative).
-        assets += abs(balance) + fundUseTotal(in: checkingTxns)
+        // Live balance already includes all spending. `abs` guards against a source
+        // reporting a signed balance (e.g. Apple Card comes through negative).
+        checkingValue = abs(balance)
     } else {
-        assets += calculateTotal(for: checkingTxns, start: .distantPast, end: now)
+        // Count reserved spending at face value so the balance reflects reality; the
+        // reserve then only holds what hasn't been spent.
+        checkingValue = calculateTotal(for: checkingTxns, start: .distantPast, end: now, includeReserved: true)
     }
+    assetItems.append(.init(id: "checking", label: "Primary checking", value: checkingValue))
 
     // Each mapped non-credit account (savings, additional checking/debit).
     for account in Set(nonCreditTxns.compactMap({ $0.account })) {
-        // Honor the savings toggle even on the SimpleFIN-balance path (the
+        // Honor the savings toggle even on the live-balance path (the
         // transaction path already excludes savings via `calculateTotal`).
         if account.accountType == .savings, !includeSavings { continue }
         let accountTxns = nonCreditTxns.filter { $0.account == account }
+        let value: Double
         if let externalID = account.externalID, let balance = balances[externalID] {
-            assets += abs(balance) + fundUseTotal(in: accountTxns)
+            value = abs(balance)
         } else {
-            assets += calculateTotal(for: accountTxns, start: .distantPast, end: now)
+            value = calculateTotal(for: accountTxns, start: .distantPast, end: now, includeReserved: true)
         }
+        let label = account.name.isEmpty ? "Account" : account.name
+        assetItems.append(.init(id: "account-\(account.externalID ?? account.name)", label: label, value: value))
     }
 
-    // MARK: Credit-card debt.
-    var creditOwed: Double = 0
+    // MARK: Credit-card debt — one item per card, stored negative (it reduces the total).
+    // The card's balance now reflects ALL spending charged to it, including reserved/budget
+    // spending (no per-card reserve adjustment — that's applied globally below). This is what
+    // fixes spend cards (Chase/Amex) from flipping positive: an all-time budget-use figure is
+    // never subtracted from a single card's current balance.
+    var creditItems: [NetTotalBreakdown.Item] = []
     for card in Set(creditTxns.compactMap({ $0.account })) {
+        let owed: Double
         switch mode {
         case .statement:
-            creditOwed += creditCardOwed(for: card, transactions: creditTxns).due
+            owed = creditCardOwed(for: card, transactions: creditTxns, includeReserved: true).due
         default: // .balance
             if let externalID = card.externalID, let balance = balances[externalID] {
-                // Fund spending charged to this card is already in its live balance;
-                // remove it here so the reserve doesn't count it a second time.
-                let cardTxns = creditTxns.filter { $0.account == card }
-                // Use the positive magnitude of what's owed regardless of the
-                // source's sign convention (Apple Card reports a negative balance).
-                creditOwed += abs(balance) - fundUseTotal(in: cardTxns)
+                // `abs` takes the owed magnitude regardless of the source's sign
+                // convention (Apple Card reports a negative balance).
+                owed = abs(balance)
             } else {
-                creditOwed += creditCardOwed(for: card, transactions: creditTxns).total
+                owed = creditCardOwed(for: card, transactions: creditTxns, includeReserved: true).total
             }
         }
+        let label = card.name.isEmpty ? "Credit card" : card.name
+        creditItems.append(.init(id: "card-\(card.externalID ?? card.name)", label: label, value: -owed))
     }
 
-    // MARK: Upcoming recurring — only FUTURE occurrences before the next payday.
-    // Past occurrences are already reflected in the balances/totals above.
-    var upcoming: Double = 0
+    // MARK: Upcoming recurring — one item per recurring transaction whose FUTURE
+    // occurrences (before the next payday) contribute. Past occurrences are already in
+    // the balances/totals above, so each item is (through-payday − through-today).
+    var upcomingItems: [NetTotalBreakdown.Item] = []
     if includeUpcoming {
         let recurringEnd = payPeriodBounds(offset: 1).start.endOfDay
         if recurringEnd > now {
             let recurring = transactions.filter { $0.recurrence != .none }
-            let throughEnd = calculateTotal(for: recurring, start: .distantPast, end: recurringEnd)
-            let throughNow = calculateTotal(for: recurring, start: .distantPast, end: now)
-            upcoming = throughEnd - throughNow
+            for txn in recurring {
+                let throughEnd = calculateTotal(for: [txn], start: .distantPast, end: recurringEnd)
+                let throughNow = calculateTotal(for: [txn], start: .distantPast, end: now)
+                let value = throughEnd - throughNow
+                guard abs(value) >= 0.005 else { continue }
+                let label = txn.notes.isEmpty ? (txn.category?.name ?? "Recurring") : txn.notes
+                upcomingItems.append(.init(id: "recurring-\(txn.id.uuidString)", label: label, value: value))
+            }
         }
     }
 
-    return assets - creditOwed + upcoming - fundReserveTotal(for: funds)
+    // MARK: Budget reserve — one item per reserving budget, stored negative. This is the
+    // single global adjustment: each budget's still-unspent set-aside money. Utilization is
+    // already reflected in the account/card balances above, so this shrinks as budgets are
+    // spent and never touches an individual card.
+    let reserveItems = budgetReserveRemainingItems(for: budgets).map { entry in
+        NetTotalBreakdown.Item(
+            id: "budget-\(entry.budget.displayName)",
+            label: entry.budget.displayName,
+            value: -entry.reserved
+        )
+    }
+
+    var groups: [NetTotalBreakdown.Group] = []
+    groups.append(.init(id: "assets", title: "Accounts", items: assetItems))
+    if !creditItems.isEmpty {
+        groups.append(.init(id: "credit", title: "Credit card debt", items: creditItems))
+    }
+    if !upcomingItems.isEmpty {
+        groups.append(.init(id: "upcoming", title: "Upcoming recurring", items: upcomingItems))
+    }
+    if !reserveItems.isEmpty {
+        groups.append(.init(id: "reserve", title: "Budget reserve", items: reserveItems))
+    }
+
+    return NetTotalBreakdown(groups: groups)
 }
 
-@MainActor func netTotalCardStatement(for transactions: [Transaction], isIncome: Bool?, with accounts: [Account], funds: [Fund]? = nil, in selectedTimeRange: HomeTimeRange) -> Double {
+@MainActor func netTotalCardStatement(for transactions: [Transaction], isIncome: Bool?, with accounts: [Account], budgets: [Budget]? = nil, in selectedTimeRange: HomeTimeRange) -> Double {
     var runningTotal: Double = 0
     let calendar = Calendar.current
     let now = Date.now
@@ -624,13 +772,13 @@ nonisolated func netTotalAggregate(for transactions: [Transaction], funds: [Fund
 
     runningTotal += windowTotal(for: typedTransactions(for: checkingTransactions, income: isIncome), in: selectedTimeRange, offset: 0)
 
-    // Apply the fund adjustment once, after all accounts are summed.
-    if isIncome == nil { runningTotal -= fundNetAdjustment(funds: funds) }
+    // Apply the budget reserve once, after all accounts are summed.
+    if isIncome == nil { runningTotal -= budgetNetAdjustment(budgets: budgets) }
 
     return runningTotal
 }
 
-@MainActor func netTotalCardBalance(for transactions: [Transaction], isIncome: Bool?, with accounts: [Account], funds: [Fund]? = nil, in selectedTimeRange: HomeTimeRange) -> Double {
+@MainActor func netTotalCardBalance(for transactions: [Transaction], isIncome: Bool?, with accounts: [Account], budgets: [Budget]? = nil, in selectedTimeRange: HomeTimeRange) -> Double {
     var runningTotal: Double = 0
     let calendar = Calendar.current
     let now = Date.now
@@ -681,8 +829,8 @@ nonisolated func netTotalAggregate(for transactions: [Transaction], funds: [Fund
 
     runningTotal += windowTotal(for: typedTransactions(for: checkingTransactions, income: isIncome), in: selectedTimeRange, offset: 0)
 
-    // Apply the fund adjustment once, after all accounts are summed.
-    if isIncome == nil { runningTotal -= fundNetAdjustment(funds: funds) }
+    // Apply the budget reserve once, after all accounts are summed.
+    if isIncome == nil { runningTotal -= budgetNetAdjustment(budgets: budgets) }
 
     return runningTotal
 }
@@ -946,10 +1094,10 @@ func waitForInitialCloudKitImport(timeout: Duration = .seconds(8)) async {
     }
 }
 
-/// Indexes Funds, Transactions and enabled Budgets in Core Spotlight so they're
-/// searchable from the system search field and Siri. Tapping a result runs the
-/// matching Open intent. Safe to call on every launch — re-indexing refreshes
-/// any entities whose displayed values changed.
+/// Indexes Transactions and active Budgets (category + freestanding) in Core Spotlight
+/// so they're searchable from the system search field and Siri. Tapping a result runs the
+/// matching Open intent. Safe to call on every launch — re-indexing refreshes any entities
+/// whose displayed values changed.
 @MainActor
 func indexEntitiesForSpotlight() async {
     let context = SharedDatabase.shared.container.mainContext
@@ -960,13 +1108,6 @@ func indexEntitiesForSpotlight() async {
     // the others (the previous single do/catch silently dropped all three when
     // any one throw occurred).
     let index = CSSearchableIndex(name: "PennyEntities")
-
-    do {
-        let funds = try context.fetch(FetchDescriptor<Fund>()).map(FundEntity.init)
-        try await index.indexAppEntities(funds)
-    } catch {
-        log.error("Failed to index Funds for Spotlight: \(error.localizedDescription)")
-    }
 
 //    do {
 //        let transactions = try context.fetch(FetchDescriptor<Transaction>()).map(TransactionEntity.init)

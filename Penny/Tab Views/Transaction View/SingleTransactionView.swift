@@ -16,35 +16,35 @@ private struct Draft {
     var isIncome: Bool = false
     var date: Date = Date()
     var account: Account? = nil
-    // A transaction is tagged with EITHER a category OR a fund, never both.
+    // A transaction is tagged with EITHER a category OR a freestanding budget, never both.
     // `Draft` is a plain struct (not an @Model), so didSet fires normally here
     // and — because `draft` lives in @State — the view re-renders on any change.
     var category: Category? = nil {
-        didSet { if category != nil { fund = nil } }
+        didSet { if category != nil { budget = nil } }
     }
-    var fund: Fund? = nil {
-        didSet { if fund != nil { category = nil } }
+    var budget: Budget? = nil {
+        didSet { if budget != nil { category = nil } }
     }
     var notes: String = ""
     var recurrence: Recurrence = .none
     var endDate: Date? = nil
-    
+
     // An elegant initializer that automatically populates the draft
     // if you pass it an existing transaction!
-    init(from transaction: Transaction? = nil, defaultCategory: Category? = nil, defaultFund: Fund? = nil) {
+    init(from transaction: Transaction? = nil, defaultCategory: Category? = nil, defaultBudget: Budget? = nil) {
         if let tx = transaction {
             self.amount = tx.amount
             self.isIncome = tx.isIncome
             self.date = tx.date
             self.account = tx.account
             self.category = tx.amount == 0.0 ? defaultCategory : tx.category
-            self.fund = tx.fund
+            self.budget = tx.budget
             self.notes = tx.notes
             self.recurrence = tx.recurrence
             self.endDate = tx.endDate
-        } else if let defaultFund {
-            // New transaction pre-tagged with the passed-in fund
-            self.fund = defaultFund
+        } else if let defaultBudget {
+            // New transaction pre-tagged with the passed-in budget
+            self.budget = defaultBudget
         } else {
             // New transaction gets the fallback default category
             self.category = defaultCategory
@@ -69,8 +69,8 @@ struct SingleTransactionView: View {
     let initialEditMode: Bool
     let transaction: Transaction?
     let category: Category?
-    let fund: Fund?
-    
+    let budget: Budget?
+
     private var title: String {
         if editMode {
             if let transaction {
@@ -78,8 +78,8 @@ struct SingleTransactionView: View {
                     return transaction.notes
                 } else if let cat = transaction.category {
                     return cat.name
-                } else if let fund = transaction.fund {
-                    return fund.name
+                } else if let budget = transaction.budget {
+                    return budget.displayName
                 }
             } else {
                 return "New Transaction"
@@ -95,7 +95,7 @@ struct SingleTransactionView: View {
                     draft: $draft,
                     transaction: transaction,
                     category: category,
-                    fund: fund,
+                    budget: budget,
                     dismiss: dismiss,
                     currencySymbol: currencySymbol,
                     amountFontSize: amountFontSize,
@@ -152,7 +152,7 @@ struct SingleTransactionView: View {
                             saveTransaction()
                             dismiss()
                         }
-                        .disabled(draft.amount == 0.0 || (draft.category == nil && draft.fund == nil))
+                        .disabled(draft.amount == 0.0 || (draft.category == nil && draft.budget == nil))
                     }
                 } else {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -175,8 +175,8 @@ struct SingleTransactionView: View {
         }
         
         // Let the struct do all the heavy lifting!
-        // A passed-in category/fund pre-populates the draft for new transactions.
-        draft = Draft(from: transaction, defaultCategory: category ?? miscCategory, defaultFund: fund)
+        // A passed-in category/budget pre-populates the draft for new transactions.
+        draft = Draft(from: transaction, defaultCategory: category ?? miscCategory, defaultBudget: budget)
     }
     
     private func saveTransaction() -> Void {
@@ -197,13 +197,13 @@ struct SingleTransactionView: View {
             existingTx.notes = draft.notes
             existingTx.account = draft.account
             existingTx.category = finalCategory
-            existingTx.fund = draft.fund
+            existingTx.budget = draft.budget
             existingTx.recurrence = draft.recurrence
             existingTx.endDate = draft.endDate
 
             // If the user manually re-categorized an imported transaction, remember
             // the choice as a rule so future imports of the same merchant match it.
-            if wasImported, draft.fund == nil {
+            if wasImported, draft.budget == nil {
                 learnCategoryRule(
                     notes: draft.notes,
                     newCategory: finalCategory,
@@ -218,7 +218,7 @@ struct SingleTransactionView: View {
                 date: draft.date,
                 account: draft.account,
                 category: finalCategory,
-                fund: draft.fund,
+                budget: draft.budget,
                 notes: draft.notes,
                 recurrence: draft.recurrence,
                 endDate: draft.endDate
@@ -274,20 +274,25 @@ struct EditTransactionView: View {
         
     @Query(sort: \Account.name) var accounts: [Account]
     @Query(sort: \Category.name) var categories: [Category]
-    @Query(sort: \Fund.name) var funds: [Fund]
-        
+    @Query(sort: \Budget.name) var budgets: [Budget]
+
+    /// Only freestanding budgets can be tagged directly on a transaction.
+    private var freestandingBudgets: [Budget] {
+        budgets.filter { $0.isFreestanding && $0.hasBudget }
+    }
+
     @Binding fileprivate var draft: Draft
-    
+
     @State private var isEndDate: Bool = false
     @State private var inputAmount: String = ""
-    
+
     @State private var showNotesSheet: Bool = false
     @State private var showDateSheet: Bool = false
     @State private var showRecurringSheet: Bool = false
-    
+
     @State private var addAccount = false
     @State private var addCategory = false
-    @State private var addFund = false
+    @State private var addBudget = false
     
     private var incomeName: String {
         if draft.category != nil {
@@ -307,8 +312,8 @@ struct EditTransactionView: View {
     
     let transaction: Transaction?
     let category: Category?
-    let fund: Fund?
-    
+    let budget: Budget?
+
     let dismiss: DismissAction
     
     let currencySymbol: String
@@ -373,8 +378,8 @@ struct EditTransactionView: View {
                         .padding(8)
                         .glassEffect(.regular, in: .circle)
                 }
-                .disabled(draft.fund != nil)
-                
+                .disabled(draft.budget != nil)
+
                 Spacer()
                 
                 Menu {
@@ -458,22 +463,22 @@ struct EditTransactionView: View {
                     
                     Menu {
                         Button {
-                            addFund = true
+                            addBudget = true
                         } label: {
-                            Label("Add Fund", systemImage: "plus")
+                            Label("Add Budget", systemImage: "plus")
                         }
-                        
+
                         Divider()
-                        
-                        Picker("Fund", selection: $draft.fund) {
-                            ForEach(funds) { fund in
-                                Text("\(fund.symbol)  \(fund.name)").tag(fund)
+
+                        Picker("Budget", selection: $draft.budget) {
+                            ForEach(freestandingBudgets) { budget in
+                                Text("\(budget.symbol)  \(budget.name)").tag(budget as Budget?)
                             }
                         }
                     } label: {
-                        Label("Fund", systemImage: "rectangle.stack.fill")
-                        if let fund = draft.fund {
-                            Text(fund.name)
+                        Label("Budget", systemImage: "rectangle.stack.fill")
+                        if let budget = draft.budget {
+                            Text(budget.name)
                                 .font(.caption)
                         }
                     }
@@ -483,12 +488,12 @@ struct EditTransactionView: View {
                             Text(category.symbol)
                                 .padding(9)
                                 .glassEffect(.regular.tint(category.color.opacity(0.5)))
-                        } else if let fund = draft.fund {
-                            Text(fund.symbol)
+                        } else if let budget = draft.budget {
+                            Text(budget.symbol)
                                 .padding(9)
-                                .glassEffect(.regular.tint(fund.color.opacity(0.5)))
+                                .glassEffect(.regular.tint(budget.color.opacity(0.5)))
                         } else {
-                            Text("Category/Fund")
+                            Text("Category/Budget")
                                 .padding(8)
                                 .glassEffect()
                         }
@@ -716,11 +721,11 @@ struct EditTransactionView: View {
         .onAppear {
             loadAmount()
         }
-        .onChange(of: draft.fund) {
-            // Pre-allocated funds only support expenses ("Use"), so force expense for them.
-            // Non-pre-allocated funds allow contributions (income), so leave isIncome alone —
+        .onChange(of: draft.budget) {
+            // Pre-funded budgets only support expenses ("Utilization"), so force expense for them.
+            // Contribute-toward budgets allow contributions (income), so leave isIncome alone —
             // otherwise loading an existing income transaction would reset it to expense.
-            if draft.fund?.preAllocate == true {
+            if draft.budget?.preFunding == true {
                 draft.isIncome = false
             }
         }
@@ -729,7 +734,7 @@ struct EditTransactionView: View {
         .toolbar {
             ToolbarItem {
                 Picker("Type", selection: $draft.isIncome) {
-                    if draft.fund?.preAllocate != true {
+                    if draft.budget?.preFunding != true {
                         Text(incomeName).tag(true)
                     }
                     
@@ -837,9 +842,9 @@ struct EditTransactionView: View {
                 EditCategoryView(category: nil)
             }
         }
-        .sheet(isPresented: $addFund) {
+        .sheet(isPresented: $addBudget) {
             NavigationStack {
-                EditFundView(fund: nil)
+                EditBudgetView(budget: nil)
             }
         }
 //        .onDisappear {
@@ -919,8 +924,8 @@ struct ShowTransactionView: View {
     private var title: (name: String, symbol: String, color: Color) {
         if let cat = draft.category {
             return (cat.name, cat.symbol, cat.color)
-        } else if let fund = draft.fund {
-            return (fund.name, fund.symbol, fund.color)
+        } else if let budget = draft.budget {
+            return (budget.name, budget.symbol, budget.color)
         } else {
             return ("Unknown", "?", .gray)
         }

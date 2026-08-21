@@ -111,7 +111,8 @@ struct FinanceKitClient {
 
         var snapshots: [FinanceKitAccountSnapshot] = []
         for account in accounts {
-            let (value, date) = signedBalance(balanceByAccount[account.id])
+            let isLiability = account.liabilityAccount != nil
+            let (value, date) = signedBalance(balanceByAccount[account.id], isLiability: isLiability)
             let transactions = try await fetchTransactions(forAccountID: account.id, since: cutoff)
             snapshots.append(
                 FinanceKitAccountSnapshot(
@@ -121,7 +122,7 @@ struct FinanceKitClient {
                     currencyCode: account.currencyCode,
                     balanceValue: value,
                     balanceDate: date,
-                    isLiability: account.liabilityAccount != nil,
+                    isLiability: isLiability,
                     transactions: transactions
                 )
             )
@@ -159,15 +160,21 @@ struct FinanceKitClient {
     }
 
     /// Decodes an `AccountBalance` into a signed amount (asset positive, owed
-    /// liability negative) and its as-of date. Prefers the available balance,
-    /// falling back to the booked balance.
-    private static func signedBalance(_ balance: FinanceKit.AccountBalance?) -> (Decimal, Date) {
+    /// liability negative) and its as-of date.
+    ///
+    /// For assets (checking/savings) the available balance — posted minus pending
+    /// holds — is the most useful spendable figure, so it's preferred. For liabilities
+    /// (credit cards) the "available" balance is available *credit* (limit − owed), NOT
+    /// the amount owed; using it makes a card look like a large asset. So liabilities
+    /// prefer the booked balance, which is the real outstanding balance.
+    private static func signedBalance(_ balance: FinanceKit.AccountBalance?, isLiability: Bool) -> (Decimal, Date) {
         guard let balance else { return (0, .now) }
         let picked: FinanceKit.Balance
         switch balance.currentBalance {
         case .available(let b): picked = b
         case .booked(let b): picked = b
-        case .availableAndBooked(let available, _): picked = available
+        case .availableAndBooked(let available, let booked):
+            picked = isLiability ? booked : available
         @unknown default: return (0, .now)
         }
         let magnitude = picked.amount.amount

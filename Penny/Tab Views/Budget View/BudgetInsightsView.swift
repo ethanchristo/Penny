@@ -137,10 +137,10 @@ struct BudgetInsightsView: View {
                 // 🚨 Extract the category from the source enum!
                 if case .category(let cat, _) = source {
                     // Pre-populate the specific category
-                    SingleTransactionView(initialEditMode: true, transaction: nil, category: cat, fund: nil)
+                    SingleTransactionView(initialEditMode: true, transaction: nil, category: cat, budget: nil)
                 } else {
                     // Overall budget doesn't have a specific category, so pass nil
-                    SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, fund: nil)
+                    SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, budget: nil)
                 }
             }
         }
@@ -468,7 +468,7 @@ struct CategoryTransactionPageView: View {
         )
         .sheet(item: $editingTransaction) { transaction in
             NavigationStack {
-                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
         }

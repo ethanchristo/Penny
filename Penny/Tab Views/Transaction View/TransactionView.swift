@@ -17,7 +17,12 @@ struct TransactionView: View {
     @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
     @Query(sort: \Account.name) var accounts: [Account]
     @Query(sort: \Category.name) var categories: [Category]
-    @Query(sort: \Fund.name) var funds: [Fund]
+    @Query(sort: \Budget.name) var budgets: [Budget]
+
+    /// Only freestanding budgets can tag transactions, so only they filter the list.
+    private var freestandingBudgets: [Budget] {
+        budgets.filter { $0.isFreestanding && $0.hasBudget }
+    }
 
     @State private var showAddTransaction = false
     @State private var editingTransaction: Transaction?
@@ -28,7 +33,7 @@ struct TransactionView: View {
     @State private var searchText = ""
     @State private var filterAccount: Account? = nil
     @State private var filterCategory: Category? = nil
-    @State private var filterFund: Fund? = nil
+    @State private var filterBudget: Budget? = nil
     @State private var filterIsIncome: Bool? = nil
     
     @State private var sortOrder: CustomSortOrder = .dateReverse
@@ -95,7 +100,7 @@ struct TransactionView: View {
                 searchString: searchText,
                 filterAccount: filterAccount,
                 filterCategory: filterCategory,
-                filterFund: filterFund,
+                filterBudget: filterBudget,
                 filterIsIncome: filterIsIncome
             )
             .searchable(text: $searchText)
@@ -171,16 +176,16 @@ struct TransactionView: View {
                     }
                     
                     Menu {
-                        Picker("Fund", selection: $filterFund) {
-                            Text("All").tag(nil as Fund?)
-                            ForEach(funds) { fund in
-                                Text("\(fund.symbol) \(fund.name)").tag(fund as Fund?)
+                        Picker("Budget", selection: $filterBudget) {
+                            Text("All").tag(nil as Budget?)
+                            ForEach(freestandingBudgets) { budget in
+                                Text("\(budget.symbol) \(budget.name)").tag(budget as Budget?)
 
                             }
                         }
                     } label: {
-                        Label("By Fund", systemImage: "rectangle.stack")
-                        Text(filterFund?.name ?? "All")
+                        Label("By Budget", systemImage: "rectangle.stack")
+                        Text(filterBudget?.name ?? "All")
                             .font(.caption)
                     }
                 } label: {
@@ -257,13 +262,13 @@ struct TransactionView: View {
         }
         .sheet(isPresented: $showAddTransaction) {
             NavigationStack {
-                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: "addTransaction", in: namespace))
         }
         .sheet(item: $editingTransaction) { transaction in
             NavigationStack {
-                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
         }

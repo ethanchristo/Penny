@@ -12,12 +12,12 @@ import SwiftData
 /// 1. We create an AppEnum to let the user toggle the grouping type.
 enum GroupingChoice: String, AppEnum {
     case category
-    case fund
+    case budget
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Grouping Choice"
     static let caseDisplayRepresentations: [GroupingChoice: DisplayRepresentation] = [
         .category: "Category",
-        .fund: "Fund"
+        .budget: "Budget"
     ]
 }
 
@@ -44,15 +44,15 @@ struct AddTransactionIntent: AppIntent {
     @Parameter(title: "End Date", description: "The day the recurrence for the transaction ends.")
     var endDate: Date?
 
-    @Parameter(title: "Grouping", description: "Assign this to a Category or a Fund.", default: .category)
+    @Parameter(title: "Grouping", description: "Assign this to a Category or a Budget.", default: .category)
     var grouping: GroupingChoice
-    
-    // 🚨 We use CategoryEntity and FundEntity here so App Intents can use your EntityQueries for the pickers!
+
+    // 🚨 We use CategoryEntity and BudgetEntity here so App Intents can use your EntityQueries for the pickers!
     @Parameter(title: "Category", description: "The category the transaction belongs to.")
     var categoryEntity: CategoryEntity?
-    
-    @Parameter(title: "Fund", description: "The fund the transaction belongs to.")
-    var fundEntity: FundEntity?
+
+    @Parameter(title: "Budget", description: "The freestanding budget the transaction belongs to.")
+    var budgetEntity: BudgetEntity?
 
     @Parameter(title: "Notes", description: "The merchant name or description.", default: "")
     var notes: String
@@ -75,7 +75,7 @@ struct AddTransactionIntent: AppIntent {
             Summary("Log a transaction of \(\.$amount)") {
                 \.$isIncome
                 \.$grouping
-                \.$fundEntity
+                \.$budgetEntity
                 \.$date
                 \.$recurrence
                 \.$endDate
@@ -92,27 +92,35 @@ struct AddTransactionIntent: AppIntent {
         let miscCategory = try? context.fetch(descriptor).first
         
         var targetCategory: Category? = miscCategory
-        var targetFund: Fund? = nil
-        
+        var targetBudget: Budget? = nil
+
         // 3. Resolve the AppEntities back into your SwiftData models based on the mutual exclusivity choice
         if grouping == .category, let catEntity = categoryEntity {
             let catID = catEntity.id
             let catDescriptor = FetchDescriptor<Category>(predicate: #Predicate { $0.id == catID })
             targetCategory = try? context.fetch(catDescriptor).first
-        } else if grouping == .fund, let fEntity = fundEntity {
-            let fundID = fEntity.id
-            let fundDescriptor = FetchDescriptor<Fund>(predicate: #Predicate { $0.id == fundID })
-            targetFund = try? context.fetch(fundDescriptor).first
-            targetCategory = nil
+        } else if grouping == .budget, let bEntity = budgetEntity {
+            let budgetID = bEntity.id
+            let budgetDescriptor = FetchDescriptor<Budget>(predicate: #Predicate { $0.id == budgetID })
+            if let budget = try? context.fetch(budgetDescriptor).first {
+                if budget.isFreestanding {
+                    // Freestanding budget: tag the transaction directly.
+                    targetBudget = budget
+                    targetCategory = nil
+                } else {
+                    // A category-linked budget resolves to its category.
+                    targetCategory = budget.category
+                }
+            }
         }
-        
+
         let newTx = Transaction(
             amount: amount,
             isIncome: isIncome,
             date: date ?? Date.now,
             account: nil,
             category: targetCategory,
-            fund: targetFund,
+            budget: targetBudget,
             notes: notes,
             recurrence: recurrence ?? .none,
             endDate: endDate,

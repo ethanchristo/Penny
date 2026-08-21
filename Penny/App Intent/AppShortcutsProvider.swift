@@ -47,19 +47,7 @@ struct PennyShortcuts: AppShortcutsProvider {
             systemImageName: "chart.bar"
         )
         
-        // 4. Open Fund (Using your system schema intent)
-        AppShortcut(
-            intent: OpenFundIntent(),
-            phrases: [
-                "Open \(\.$target) fund in \(.applicationName)",
-                "Show my \(\.$target) fund in \(.applicationName)",
-                "Check my \(\.$target) fund in \(.applicationName)"
-            ],
-            shortTitle: "Open Fund",
-            systemImageName: "briefcase"
-        )
-        
-        // 5. Open Transaction (Using your system schema intent)
+        // 4. Open Transaction (Using your system schema intent)
         AppShortcut(
             intent: OpenTransactionIntent(),
             phrases: [

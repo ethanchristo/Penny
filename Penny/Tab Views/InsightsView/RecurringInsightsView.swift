@@ -22,18 +22,18 @@ struct RecurringItem: Identifiable {
     /// The user's note wins, falling back to the tagged category/fund name.
     var name: String {
         if !transaction.notes.isEmpty { return transaction.notes }
-        return transaction.category?.name ?? transaction.fund?.name ?? "Recurring"
+        return transaction.category?.name ?? transaction.budget?.name ?? "Recurring"
     }
 
     var symbol: String {
-        transaction.category?.symbol ?? transaction.fund?.symbol ?? (transaction.isIncome ? "💵" : "🔁")
+        transaction.category?.symbol ?? transaction.budget?.symbol ?? (transaction.isIncome ? "💵" : "🔁")
     }
 
     /// The category/fund color, or a green/red fallback keyed on the sign so an
     /// uncategorized recurring transaction still reads as income vs. expense.
     var color: Color {
         if let category = transaction.category { return category.color }
-        if let fund = transaction.fund { return fund.color }
+        if let fund = transaction.budget { return fund.color }
         return transaction.isIncome ? Color(.systemGreen) : Color(.systemRed)
     }
 
@@ -45,7 +45,7 @@ struct RecurringItem: Identifiable {
     /// different categories each get their own.
     var dotKey: String {
         if let category = transaction.category { return "c-\(category.name)" }
-        if let fund = transaction.fund { return "f-\(fund.name)" }
+        if let fund = transaction.budget { return "f-\(fund.name)" }
         return transaction.isIncome ? "income" : "expense"
     }
 
@@ -287,13 +287,13 @@ struct RecurringInsightsView: View {
         }
         .sheet(isPresented: $showAddTransaction) {
             NavigationStack {
-                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: "addTransaction", in: namespace))
         }
         .sheet(item: $editingTransaction) { transaction in
             NavigationStack {
-                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
         }

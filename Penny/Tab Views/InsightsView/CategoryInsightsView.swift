@@ -167,13 +167,13 @@ struct CategoryInsightsView: View {
         }
         .sheet(isPresented: $showAddTransaction) {
             NavigationStack {
-                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: "addTransaction", in: namespace))
         }
         .sheet(item: $editingTransaction) { transaction in
             NavigationStack {
-                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
         }

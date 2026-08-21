@@ -280,13 +280,13 @@ struct SpendingView: View {
         }
         .sheet(isPresented: $showAddTransaction) {
             NavigationStack {
-                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: "addTransaction", in: namespace))
         }
         .sheet(item: $editingTransaction) { transaction in
             NavigationStack {
-                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, fund: nil)
+                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, budget: nil)
             }
             .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
         }
@@ -339,9 +339,9 @@ struct SpendingOverview: View {
     let window: (start: Date, end: Date)
 
     private var total: Double {
-        // Pass an empty funds array so no fund reserve is applied — Trends
-        // excludes funds entirely.
-        netTotalType(for: transactions, funds: [], in: timeRange, offset: offset, type: .timeRange)
+        // Pass an empty budgets array so no reserve is applied — Trends
+        // excludes freestanding budgets entirely.
+        netTotalType(for: transactions, budgets: [], in: timeRange, offset: offset, type: .timeRange)
     }
 
     private var average: Double {

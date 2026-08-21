@@ -13,7 +13,6 @@ enum AppTab: Hashable {
     case home
     case budgets
     case insights
-    case funds
     case transactions
 }
 
@@ -29,16 +28,12 @@ final class AppRouter {
 
     /// Pending deep-link targets, keyed by the entity's stable `id`. Each tab
     /// view consumes its value (resolving the model and navigating) then clears it.
-    var fundToOpen: UUID?
+    /// `budgetToOpen` covers both category and freestanding budgets — BudgetView
+    /// resolves it against either.
     var budgetToOpen: UUID?
     var transactionToOpen: UUID?
 
     private init() {}
-
-    func openFund(id: UUID) {
-        selectedTab = .funds
-        fundToOpen = id
-    }
 
     func openBudget(id: UUID) {
         selectedTab = .budgets

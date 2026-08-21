@@ -19,7 +19,7 @@ struct TransactionFilteredView: View {
     
     @Binding var editingTransaction: Transaction?
     
-    @State private var showFundSection = false
+    @State private var showBudgetSection = false
     @State private var pendingDeletion: Transaction? = nil
     
     @State private var haptics: Int = 0
@@ -40,7 +40,7 @@ struct TransactionFilteredView: View {
     var searchString: String
     var filterAccount: Account?
     var filterCategory: Category?
-    var filterFund: Fund?
+    var filterBudget: Budget?
     var filterIsIncome: Bool?
         
     /// The fully-derived sections for one render. Built once per body pass by
@@ -69,15 +69,15 @@ struct TransactionFilteredView: View {
             let matchesSearch = searchString.isEmpty ||
                                 (t.account?.name.localizedStandardContains(searchString) == true) ||
                                 (t.category?.name.localizedStandardContains(searchString) == true) ||
-                                (t.fund?.name.localizedStandardContains(searchString) == true) ||
+                                (t.budget?.name.localizedStandardContains(searchString) == true) ||
                                 t.notes.localizedStandardContains(searchString)
 
             let matchesAccount = filterAccount == nil || t.account == filterAccount
             let matchesCategory = filterCategory == nil || t.category == filterCategory
-            let matchedFund = filterFund == nil || t.fund == filterFund
+            let matchedBudget = filterBudget == nil || t.budget == filterBudget
             let matchesIncome = filterIsIncome == nil || t.isIncome == filterIsIncome!
 
-            return matchesSearch && matchesAccount && matchesCategory && matchedFund && matchesIncome
+            return matchesSearch && matchesAccount && matchesCategory && matchedBudget && matchesIncome
         }
 
         // Sorts by next occurrence, expanding each transaction's recurrence just once.
@@ -104,7 +104,7 @@ struct TransactionFilteredView: View {
         var sections = DisplaySections()
         sections.recurring = sortedByNextOccurrence(filtered.filter { $0.recurrence != .none && notEnded($0) })
         sections.upcoming = sortedByNextOccurrence(filtered.filter { ($0.date > now || $0.recurrence != .none) && notEnded($0) })
-        sections.funded = filtered.filter { $0.fund != nil }
+        sections.funded = filtered.filter { $0.budget != nil }
 
         // Isolate all past, non-recurring transactions
         let pastNonRecurring = filtered.filter { $0.recurrence == .none && $0.date <= now }
@@ -204,7 +204,7 @@ struct TransactionFilteredView: View {
                 .animation(.snappy, value: showUpcomingSection)
             }
 
-            if showFundSection {
+            if showBudgetSection {
                 ForEach(sections.funded) { transaction in
                     Button {
                         editingTransaction = transaction
@@ -225,7 +225,7 @@ struct TransactionFilteredView: View {
         }
         .safeAreaPadding(.bottom)
         .sensoryFeedback(.impact(weight: .light), trigger: haptics)
-        .sensoryFeedback(.impact(weight: .light), trigger: showFundSection)
+        .sensoryFeedback(.impact(weight: .light), trigger: showBudgetSection)
         .sensoryFeedback(.impact(weight: .light), trigger: showUpcomingSection)
         .sensoryFeedback(.impact(weight: .light), trigger: showRecurringSection)
     }
@@ -481,51 +481,51 @@ struct TransactionRowView: View {
             transaction.notes
         } else if let category = transaction.category {
             category.name
-        } else if let fund = transaction.fund {
-            fund.name
+        } else if let budget = transaction.budget {
+            budget.name
         } else {
             "Unknown"
         }
     }
-    
+
     private var symbol: String {
         if let category = transaction.category {
             category.symbol
-        } else if let fund = transaction.fund {
-            fund.symbol
+        } else if let budget = transaction.budget {
+            budget.symbol
         } else {
             "?"
         }
     }
-    
+
     private var color: Color {
         if let category = transaction.category {
             category.color
-        } else if let fund = transaction.fund {
-            fund.color
+        } else if let budget = transaction.budget {
+            budget.color
         } else {
             .gray
         }
     }
-    
+
     private var amountCellColor: Color {
         if transaction.isIncome {
-            if transaction.fund != nil {
+            if transaction.budget != nil {
                 Color(.systemBlue)
             } else {
                 Color(.systemGreen)
             }
         } else {
-            if transaction.fund != nil {
+            if transaction.budget != nil {
                 Color(.systemGray)
             } else{
                 .clear
             }
         }
     }
-    
+
     private var amountColor: Color {
-        if transaction.fund != nil {
+        if transaction.budget != nil {
             .white
         } else {
             if transaction.isIncome {

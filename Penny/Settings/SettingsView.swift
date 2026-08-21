@@ -94,13 +94,6 @@ struct SettingsView: View {
                     Label("Budgets", systemImage: "rectangle.grid.2x2")
                 }
                 .foregroundStyle(.primary)
-                
-                NavigationLink {
-                    FundSettingsView()
-                } label: {
-                    Label("Funds", systemImage: "rectangle.stack")
-                }
-                .foregroundStyle(.primary)
             }
             
             Section("Home Tab") {

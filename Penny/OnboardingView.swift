@@ -23,7 +23,7 @@ enum OnboardingPage: Int, CaseIterable {
         case .budget:
             return "Budgets"
         case .funds:
-            return "Funds"
+            return "Custom Budgets"
         case .insights:
             return "Insights"
         }
@@ -38,7 +38,7 @@ enum OnboardingPage: Int, CaseIterable {
         case .budget:
             return "Set spending limits by category and watch your progress throughout the month at a glance."
         case .funds:
-            return "Set aside money for goals and recurring expenses so it's ready when you need it."
+            return "Create standalone budgets for goals and recurring expenses — pre-fund them to set money aside so it's ready when you need it."
         case .insights:
             return "Understand your spending with clear breakdowns of cash flow, categories, and recurring charges."
         }
