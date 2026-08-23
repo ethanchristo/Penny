@@ -1,0 +1,159 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.00011,0.03731,0.00302,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.54895,0.32378,0.19526,1.00000",
+              "display-p3:0.47592,0.27197,0.15556,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.909203506097561,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.28810975609756095,
+                "y" : 0.9354497582872928
+              }
+            }
+          },
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "Vector 1 (1).png",
+          "name" : "Vector 1 (1)",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -31.75,
+              -0.5
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
+      }
+    },
+    {
+      "layers" : [
+        {
+          "blend-mode" : "normal",
+          "fill" : {
+            "automatic-gradient" : "display-p3:0.76758,0.43823,0.25024,0.90000",
+            "orientation" : {
+              "start" : {
+                "x" : 0.7775373363338791,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.14923844108019657,
+                "y" : 0.9441020056726094
+              }
+            }
+          },
+          "hidden" : false,
+          "image-name" : "Subtract-2.png",
+          "name" : "Subtract-2",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -18.879999999999995,
+              -18.299999999999955
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.83639,0.47279,0.26525,1.00000",
+              "display-p3:0.76758,0.43823,0.25024,0.90000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.5,
+                "y" : 0.664790546594982
+              }
+            }
+          },
+          "hidden" : false,
+          "image-name" : "Ellipse 6.png",
+          "name" : "Ellipse 6",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -9.625,
+              -0.5
+            ]
+          }
+        }
+      ],
+      "name" : "Group",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "automatic-gradient" : "display-p3:0.76758,0.43823,0.25024,0.90000"
+          },
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "Subtract 2.png",
+          "name" : "Subtract 2"
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "display-p3:0.76758,0.43823,0.25024,0.90000"
+          },
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "Ellipse 4.png",
+          "name" : "Ellipse 4",
+          "position" : {
+            "scale" : 1.02,
+            "translation-in-points" : [
+              -18.879999999999995,
+              -18.299999999999955
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
