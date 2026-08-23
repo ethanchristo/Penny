@@ -122,7 +122,7 @@ struct HomeView: View {
                     categories: categories,
                     budgets: budgets,
                     transactions: transactions,
-                    netTotal: stats.netTotal
+                    selectedTimeRange: selectedTimeRange
                 )
                 .padding(.top, 16)
                 .padding(.horizontal, 24)
@@ -397,10 +397,10 @@ struct HomeView: View {
     }
 }
 
-/// A compact glass card under the net total that reconciles budget overspending
-/// against the money the user has to spend. The "spendable pool" is the overall
-/// budget's remaining amount when the overall budget is on, otherwise the net total —
-/// so the summary answers "what's left, and can it cover where I went over?".
+/// A compact glass card under the net total summarizing budget health: a highlighted
+/// overall-budget section (only when the overall budget is enabled), the budgets the
+/// user has overspent, and the recurring budgets still under their limit — plus a
+/// friendly nudge for whatever spendable money is left over.
 struct BudgetSummaryView: View {
     @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
 
@@ -410,21 +410,28 @@ struct BudgetSummaryView: View {
     let categories: [Category]
     let budgets: [Budget]
     let transactions: [Transaction]
-    let netTotal: Double
+    /// The home tab's selected range — used to grant ended one-time budgets a grace
+    /// window before they drop off the overspent list (see `overspentBudgets`).
+    let selectedTimeRange: HomeTimeRange
 
-    /// One overspent budget (category or freestanding) with the amount it's over by.
-    private struct OverspentBudget: Identifiable {
+    /// One budget row: a signed magnitude (always positive here) with its name/symbol.
+    private struct BudgetStat: Identifiable {
         let id: String
         let symbol: String
         let name: String
-        let over: Double
+        let amount: Double
     }
 
-    /// Every budget currently spent past its limit, biggest overage first.
-    private var overspentBudgets: [OverspentBudget] {
-        var results: [OverspentBudget] = []
+    // MARK: - Overspent / underspent lists
 
-        // Category budgets — spend for the current window vs. the category's limit.
+    /// Budgets currently spent past their limit, biggest overage first. A pre-funded
+    /// one-time budget is dropped once today is past the end of the selected-range
+    /// window that follows its end date, so a closed envelope stops nagging while its
+    /// late-posting transactions still have time to land.
+    private var overspentBudgets: [BudgetStat] {
+        var results: [BudgetStat] = []
+
+        // Category budgets — windowed spend vs. the category's limit.
         for category in categories {
             guard let budget = category.budget, budget.hasBudget, !budget.isFreestanding else { continue }
             let limit = budget.amount
@@ -434,172 +441,185 @@ struct BudgetSummaryView: View {
                 results.append(.init(id: "cat-\(category.id)",
                                      symbol: category.symbol,
                                      name: category.name,
-                                     over: spent - limit))
+                                     amount: spent - limit))
             }
         }
 
-        // Freestanding budgets already track their own remaining balance.
+        // Freestanding budgets track their own remaining balance.
         for budget in budgets where budget.hasBudget && budget.isFreestanding {
-            if budget.remaining < 0 {
+            guard budget.remaining < 0 else { continue }
+            // Skip pre-funded one-time budgets whose grace window has passed.
+            if budget.preFunding, !budget.isRecurring, let end = budget.end,
+               Date.now > windowEnd(after: end) {
+                continue
+            }
+            results.append(.init(id: "budget-\(budget.id)",
+                                 symbol: budget.displaySymbol,
+                                 name: budget.displayName,
+                                 amount: -budget.remaining))
+        }
+
+        return results.sorted { $0.amount > $1.amount }
+    }
+
+    /// Recurring budgets still under their limit, most room first. One-time budgets are
+    /// intentionally skipped — an ended envelope isn't "underspent", it's just done.
+    private var underspentBudgets: [BudgetStat] {
+        var results: [BudgetStat] = []
+
+        // Category budgets are always recurring.
+        for category in categories {
+            guard let budget = category.budget, budget.hasBudget, !budget.isFreestanding else { continue }
+            let limit = budget.amount
+            guard limit > 0 else { continue }
+            let spent = budgetTotal(for: category, in: transactions, by: 0)
+            if spent < limit {
+                results.append(.init(id: "cat-\(category.id)",
+                                     symbol: category.symbol,
+                                     name: category.name,
+                                     amount: limit - spent))
+            }
+        }
+
+        // Recurring freestanding budgets only.
+        for budget in budgets where budget.hasBudget && budget.isFreestanding && budget.isRecurring {
+            if budget.remaining > 0 {
                 results.append(.init(id: "budget-\(budget.id)",
                                      symbol: budget.displaySymbol,
                                      name: budget.displayName,
-                                     over: -budget.remaining))
+                                     amount: budget.remaining))
             }
         }
 
-        return results.sorted { $0.over > $1.over }
+        return results.sorted { $0.amount > $1.amount }
     }
 
     private var totalOverspent: Double {
-        overspentBudgets.reduce(0) { $0 + $1.over }
+        overspentBudgets.reduce(0) { $0 + $1.amount }
     }
 
-    /// Whether the reconciliation uses the overall budget (on) or the net total (off).
-    private var usingOverall: Bool { overallBudget.isEnabled }
-
-    /// The money available to spend: overall budget remaining, or the net total.
-    private var availableAmount: Double {
-        usingOverall
-            ? overallBudget.budget - overallBudgetTotal(for: overallBudget, in: transactions, by: 0)
-            : netTotal
-    }
-
-    private var availableSubtitle: String {
-        if usingOverall {
-            let window = budgetWindowText(from: overallBudget.budgetWindow)
-            return availableAmount >= 0
-                ? "left in your overall budget \(window)"
-                : "over your overall budget \(window)"
-        } else {
-            return availableAmount >= 0
-                ? "net total available to spend"
-                : "your net total is in the red"
+    /// The end of the selected-range window that `date` falls in — the first window
+    /// boundary on or after it. `allTime` has no boundary, so nothing ever ages out.
+    private func windowEnd(after date: Date) -> Date {
+        switch selectedTimeRange {
+        case .daily:     return date.endOfDay
+        case .weekly:    return date.endOfWeek
+        case .monthly:   return date.endOfMonth
+        case .yearly:    return date.endOfYear
+        case .payPeriod: return payPeriodBounds(containing: date, offset: 0).end
+        case .allTime:   return .distantFuture
         }
     }
 
-    /// Reconciles the overspend against the spendable pool: how much you'd have left
-    /// after covering it, or how far short you'd fall.
-    private var reconciliationText: String {
-        let count = overspentBudgets.count
-        let noun = count == 1 ? "budget" : "budgets"
-        let source = usingOverall ? "budget" : "net total"
-        let overStr = totalOverspent.formatted(.currency(code: currencyCode))
+    // MARK: - Overall budget
 
-        let head = "You've overspent \(overStr) across \(count) \(noun)."
-        let after = availableAmount - totalOverspent
-        if after >= 0 {
-            return head + " Covering it from your \(source) leaves \(after.formatted(.currency(code: currencyCode)))."
-        } else {
-            return head + " That's \(abs(after).formatted(.currency(code: currencyCode))) more than your \(source)."
-        }
+    private var overallLimit: Double { overallBudget.budget }
+    private var overallSpent: Double { overallBudgetTotal(for: overallBudget, in: transactions, by: 0) }
+    private var overallRemaining: Double { overallLimit - overallSpent }
+
+    /// Whether there's anything worth rendering, so the card can hide entirely otherwise.
+    private var hasContent: Bool {
+        overallBudget.isEnabled || !overspentBudgets.isEmpty || !underspentBudgets.isEmpty
     }
 
-    private var amountColor: Color {
-        let base: Color = availableAmount < 0 ? Color(.systemRed) : Color(.systemGreen)
-        return colorScheme == .dark ? base.mix(with: .white, by: 0.4) : base.mix(with: .black, by: 0.3)
+    /// Mixes a semantic color toward the foreground so it stays legible on glass.
+    private func toned(_ base: Color) -> Color {
+        colorScheme == .dark ? base.mix(with: .white, by: 0.4) : base.mix(with: .black, by: 0.3)
     }
-
-    /// What's genuinely free to use: the spendable pool minus anything needed to cover
-    /// overspending. Drives the "ideas" nudge so it only shows when there's real money left.
-    private var spendableLeftover: Double {
-        availableAmount - totalOverspent
-    }
-
-    /// Friendly ways to put a positive leftover to work. Purely suggestive — tapping
-    /// one just closes the nudge, so it never records a transaction on its own.
-    private struct SpendIdea: Identifiable {
-        var id: String { title }
-        let title: String
-        let systemImage: String
-    }
-
-    private let spendIdeas: [SpendIdea] = [
-        .init(title: "Save it", systemImage: "building.columns.fill"),
-        .init(title: "Invest it", systemImage: "chart.line.uptrend.xyaxis"),
-        .init(title: "Treat yourself", systemImage: "gift.fill"),
-        .init(title: "Share with friends", systemImage: "person.2.fill")
-    ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label("Summary", systemImage: "sparkles")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+        if hasContent {
+            VStack(alignment: .leading, spacing: 16) {
+                Label("Summary", systemImage: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(availableAmount, format: .currency(code: currencyCode))
-                    .font(.title.bold())
+                if overallBudget.isEnabled {
+                    overallSection
+                }
+
+                if !overspentBudgets.isEmpty {
+                    if overallBudget.isEnabled { Divider().opacity(0.4) }
+                    budgetList(title: "Overspent", items: overspentBudgets, tint: .red, over: true)
+                }
+
+                if !underspentBudgets.isEmpty {
+                    if overallBudget.isEnabled || !overspentBudgets.isEmpty { Divider().opacity(0.4) }
+                    budgetList(title: "Underspent", items: underspentBudgets, tint: .green, over: false)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 36))
+        }
+    }
+
+    /// The highlighted overall-budget block: remaining amount, a progress bar, and the
+    /// spent-of-limit line, tinted by whether the budget is still in the black.
+    private var overallSection: some View {
+        let color: Color = overallRemaining < 0 ? Color(.systemRed) : Color(.systemGreen)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Overall Budget", systemImage: "chart.pie.fill")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text(budgetWindowText(from: overallBudget.budgetWindow))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(alignment: .lastTextBaseline, spacing: 6) {
+                Text(overallRemaining, format: .currency(code: currencyCode))
+                    .font(.title2.bold())
                     .monospacedDigit()
-                    .foregroundStyle(amountColor)
+                    .foregroundStyle(toned(color))
                     .contentTransition(.numericText())
-
-                Text(availableSubtitle)
+                Text(overallRemaining < 0 ? "over" : "left")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
-            if overspentBudgets.isEmpty {
-                Label("All budgets are on track", systemImage: "checkmark.circle.fill")
-                    .font(.footnote)
+            ProgressView(value: min(max(overallSpent, 0), overallLimit), total: max(overallLimit, 0.01))
+                .tint(toned(color))
+
+            Text("\(overallSpent.formatted(.currency(code: currencyCode))) spent of \(overallLimit.formatted(.currency(code: currencyCode)))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 24))
+    }
+
+    /// A titled list of budget rows with a subtotal. `over` shows amounts as negative
+    /// (overspend); otherwise they're the positive remaining.
+    @ViewBuilder
+    private func budgetList(title: String, items: [BudgetStat], tint: Color, over: Bool) -> some View {
+        let subtotal = items.reduce(0) { $0 + $1.amount }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text(subtotal, format: .currency(code: currencyCode))
+                    .font(.caption)
+                    .monospacedDigit()
                     .foregroundStyle(.secondary)
-                    .symbolRenderingMode(.multicolor)
-            } else {
-                Divider().opacity(0.4)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Overspent")
-                        .font(.subheadline.weight(.semibold))
-
-                    ForEach(overspentBudgets) { item in
-                        HStack(spacing: 8) {
-                            Text(item.symbol)
-                            Text(item.name)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(item.over, format: .currency(code: currencyCode))
-                                .monospacedDigit()
-                                .foregroundStyle(.red)
-                        }
-                        .font(.subheadline)
-                    }
-
-                    Text(reconciliationText)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
 
-            if spendableLeftover > 0 {
-                Divider().opacity(0.4)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Ideas to make it count")
-                        .font(.subheadline.weight(.semibold))
-
-                    Text("You've got \(spendableLeftover.formatted(.currency(code: currencyCode))) free — put it to work.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    ScrollView(.horizontal) {
-                        HStack(spacing: 8) {
-                            ForEach(spendIdeas) { idea in
-                                Label(idea.title, systemImage: idea.systemImage)
-                                    .font(.caption.weight(.medium))
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.secondary.opacity(0.12), in: Capsule())
-                            }
-                        }
-                    }
-                    .scrollIndicators(.hidden)
+            ForEach(items) { item in
+                HStack(spacing: 8) {
+                    Text(item.symbol)
+                    Text(item.name)
+                        .lineLimit(1)
+                    Spacer()
+                    Text(over ? -item.amount : item.amount, format: .currency(code: currencyCode))
+                        .monospacedDigit()
+                        .foregroundStyle(toned(tint))
                 }
+                .font(.subheadline)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 36))
     }
+
 }

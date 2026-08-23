@@ -115,7 +115,8 @@ struct BudgetView: View {
                                 Label("Turn Off Overall Budget", systemImage: "minus.circle")
                             }
                         }
-                        .padding(.bottom, 26)
+                        .padding(.top)
+                        
                     }
 
                     let recurringCount = budgetedCategories.count + recurringFreestandingBudgets.count
@@ -133,6 +134,7 @@ struct BudgetView: View {
                         } header: {
                             sectionHeader("Recurring", count: recurringCount)
                         }
+                        .padding(.top, 20)
                     }
 
                     if !nonRecurringOngoingBudgets.isEmpty {
@@ -208,10 +210,32 @@ struct BudgetView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Add Budget", systemImage: "plus") {
-                    showAddBudget = true
+                // Once an overall budget exists the plus just adds another budget; until
+                // then it offers a choice between setting up the overall budget or adding
+                // an ordinary one.
+                if overallBudget.isEnabled {
+                    Button("Add Budget", systemImage: "plus") {
+                        showAddBudget = true
+                    }
+                    .matchedTransitionSource(id: "addBudget", in: namespace)
+                } else {
+                    Menu {
+                        Button {
+                            editingOverallBudget = true
+                        } label: {
+                            Label("Overall Budget", systemImage: "chart.pie")
+                        }
+
+                        Button {
+                            showAddBudget = true
+                        } label: {
+                            Label("Other Budget", systemImage: "rectangle.stack.badge.plus")
+                        }
+                    } label: {
+                        Label("Add Budget", systemImage: "plus")
+                    }
+                    .matchedTransitionSource(id: "addBudget", in: namespace)
                 }
-                .matchedTransitionSource(id: "addBudget", in: namespace)
             }
         }
         .sheet(item: $showAddCategoryTransaction) { category in

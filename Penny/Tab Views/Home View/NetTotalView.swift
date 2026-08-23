@@ -93,7 +93,7 @@ struct NetTotalView: View {
                             .foregroundStyle(totalColor)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding()
+                    .padding(20)
                     .frame(maxWidth: 200, maxHeight: .infinity)
                 }
                 .glassEffect(.clear.interactive(), in: RoundedRectangle(cornerRadius: 36))

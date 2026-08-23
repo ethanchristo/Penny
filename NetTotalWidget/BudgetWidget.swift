@@ -126,7 +126,12 @@ struct BudgetProvider: AppIntentTimelineProvider {
     /// main actor where the shared SwiftData context lives.
     @MainActor
     private func makeEntry(for configuration: SelectBudgetIntent) async -> BudgetEntry {
-        let id = configuration.budget?.id ?? (await WidgetBudgetQuery().defaultResult())?.id
+        let id: String?
+        if let configured = configuration.budget?.id {
+            id = configured
+        } else {
+            id = await WidgetBudgetQuery().defaultResult()?.id
+        }
         guard let id else { return BudgetEntry(date: Date(), snapshot: nil) }
         return BudgetEntry(date: Date(), snapshot: snapshot(forID: id))
     }
@@ -165,7 +170,7 @@ struct BudgetProvider: AppIntentTimelineProvider {
             let spent = budgetTotal(for: category, in: transactions, by: 0)
             let remaining = budget.amount - spent
             return BudgetSnapshot(
-                title: category.name, symbol: category.symbol, colorHex: budget.hexColor,
+                title: category.name, symbol: category.symbol, colorHex: category.hexColor,
                 spent: spent, remaining: remaining,
                 descriptor: remaining < 0 ? "over" : "remaining",
                 windowText: budgetWindowText(from: budget.budgetWindow ?? .monthly),

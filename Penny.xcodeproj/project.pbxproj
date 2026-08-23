@@ -95,6 +95,7 @@
 				Helpers/Extensions.swift,
 				Helpers/Functions.swift,
 				Helpers/HomeStats.swift,
+				Helpers/InsightsChartsCore.swift,
 				Helpers/Structs.swift,
 				"Settings/Category View/EditCategoryView.swift",
 				Settings/CategoryRulesView.swift,
@@ -597,7 +598,7 @@
 		E67E443F2F04B2C800FB038D /* Debug configuration for PBXNativeTarget "Penny" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "Penny 2";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Penny/Penny.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
@@ -644,7 +645,7 @@
 		E67E44402F04B2C800FB038D /* Release configuration for PBXNativeTarget "Penny" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "Penny 2";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Penny/Penny.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";

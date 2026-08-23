@@ -144,3 +144,4 @@ class Transaction {
         self.externalID = externalID
     }
 }
+

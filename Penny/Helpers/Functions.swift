@@ -931,15 +931,18 @@ private func firstDayOfMonth(_ day: Int, onOrAfter reference: Date, calendar: Ca
 }
 
 func overallBudgetTotal(for overallBudget: OverallBudget, in transactions: [Transaction], by shiftAmount: Int) -> Double {
-    let overallTransactions = transactions .filter { !$0.isIncome }
+    // Spending only: the overall budget is a spend cap, so income (payroll especially)
+    // is excluded — otherwise a paycheck would net the "spent" figure negative.
+    let overallTransactions = transactions.filter { !$0.isIncome }
     let window = overallBudget.budgetWindow
-    
+
     return budgetAmountSpent(window: window, shiftAmount: shiftAmount, transactions: overallTransactions)
 }
 
 func budgetTotal(for category: Category, in transactions: [Transaction], by shiftAmount: Int) -> Double {
+    // Include income too so refunds/reimbursements net against spending (see budgetAmountSpent).
     let categoryTransactions = transactions.filter { transaction in
-        !transaction.isIncome && transaction.category?.name == category.name
+        transaction.category?.name == category.name
     }
 
     let window = category.budget?.budgetWindow ?? .monthly
@@ -947,17 +950,18 @@ func budgetTotal(for category: Category, in transactions: [Transaction], by shif
     return budgetAmountSpent(window: window, shiftAmount: shiftAmount, transactions: categoryTransactions)
 }
 
+/// The net amount spent in a window: expenses add, income (refunds, reimbursements)
+/// subtracts, so the total reflects money that actually left net of anything that came
+/// back. Positive means net spending; it can go negative if income exceeds expenses.
 func budgetAmountSpent(window: BudgetWindow, shiftAmount: Int, transactions: [Transaction]) -> Double {
     let calendar = Calendar.current
     let (start, end) = budgetWindowBounds(for: window, shiftAmount: shiftAmount)
 
-    let transactionSum = transactions.reduce(0.0) { total, transaction in
+    return transactions.reduce(0.0) { total, transaction in
         let multiplier = occurrenceCount(of: transaction, from: start, to: end, calendar: calendar)
         let amount = abs(transaction.amount) * Double(multiplier)
-        return transaction.isIncome ? total + amount : total - amount
+        return transaction.isIncome ? total - amount : total + amount
     }
-
-    return abs(transactionSum)
 }
 
 // MARK: - Date Calculations

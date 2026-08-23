@@ -165,7 +165,11 @@ class Budget {
 
 @Observable
 class OverallBudget {
-    private let defaults = UserDefaults.standard
+    /// Stored in the App Group suite (falling back to `.standard` only if the
+    /// group is unavailable) so the widget extension can read the overall budget
+    /// from its own process. Legacy installs kept these keys in `.standard`; the
+    /// initializer migrates them once on first launch after the move.
+    private let defaults = UserDefaults(suiteName: SharedDatabase.appGroup) ?? .standard
 
     // Backing keys
     private let enabledKey = "overallBudgetEnabled"
@@ -186,6 +190,8 @@ class OverallBudget {
     }
 
     init() {
+        Self.migrateFromStandardIfNeeded(to: defaults, keys: (enabledKey, amountKey, windowKey))
+
         // Load from UserDefaults with sensible defaults
         self.isEnabled = defaults.object(forKey: enabledKey) as? Bool ?? false
         self.budget = defaults.object(forKey: amountKey) as? Double ?? 0.0
@@ -193,6 +199,21 @@ class OverallBudget {
             self.budgetWindow = window
         } else {
             self.budgetWindow = .monthly
+        }
+    }
+
+    /// One-time copy of the overall-budget keys from `.standard` into the group
+    /// suite. Runs only when the group suite has no value yet but `.standard`
+    /// does, so it never clobbers newer group values on subsequent launches.
+    private static func migrateFromStandardIfNeeded(to group: UserDefaults, keys: (enabled: String, amount: String, window: String)) {
+        let standard = UserDefaults.standard
+        guard group.object(forKey: keys.enabled) == nil,
+              standard.object(forKey: keys.enabled) != nil else { return }
+
+        group.set(standard.bool(forKey: keys.enabled), forKey: keys.enabled)
+        group.set(standard.double(forKey: keys.amount), forKey: keys.amount)
+        if let window = standard.string(forKey: keys.window) {
+            group.set(window, forKey: keys.window)
         }
     }
 }

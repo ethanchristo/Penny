@@ -12,5 +12,10 @@ import SwiftUI
 struct NetTotalWidgetBundle: WidgetBundle {
     var body: some Widget {
         NetTotalWidget()
+        BudgetWidget()
+        SpendingInsightWidget()
+        CategoriesInsightWidget()
+        CashFlowInsightWidget()
+        RecurringInsightWidget()
     }
 }

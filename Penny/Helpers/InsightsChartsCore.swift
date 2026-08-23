@@ -630,3 +630,40 @@ func cashFlowSankeyData(
         nodes.append(SankeyNode(id: "in-none", label: "Income", color: Color(.systemGreen), column: 0))
         links.append(SankeyLink(source: "in-none", target: centerID, value: uncategorizedIncome))
         totalIncome += uncategorizedIncome
+    }
+
+    // Expense destinations on the right, each fed by the hub.
+    for category in categories {
+        let amount = abs(calculateTotal(for: expenses.filter { $0.category == category },
+                                        start: window.start, end: window.end))
+        if amount > 0 {
+            let id = "ex-\(category.name)"
+            nodes.append(SankeyNode(id: id, label: "\(category.symbol) \(category.name)", color: category.color, column: 2))
+            links.append(SankeyLink(source: centerID, target: id, value: amount))
+            totalExpense += amount
+        }
+    }
+
+    let uncategorizedExpense = abs(calculateTotal(for: expenses.filter { $0.category == nil },
+                                                  start: window.start, end: window.end))
+    if uncategorizedExpense > 0 {
+        nodes.append(SankeyNode(id: "ex-none", label: "Other", color: Color(.systemGray), column: 2))
+        links.append(SankeyLink(source: centerID, target: "ex-none", value: uncategorizedExpense))
+        totalExpense += uncategorizedExpense
+    }
+
+    guard totalIncome > 0 || totalExpense > 0 else { return ([], []) }
+
+    // Fund any shortfall (spending more than earned) with an extra "From Savings"
+    // inflow so the hub still balances. A surplus is simply left unshown — the
+    // expense side just won't fill the full height of the income side.
+    let net = totalIncome - totalExpense
+    if net < -0.005 {
+        nodes.append(SankeyNode(id: "deficit", label: "From Savings", color: Color(.systemOrange), column: 0))
+        links.append(SankeyLink(source: "deficit", target: centerID, value: -net))
+    }
+
+    nodes.append(SankeyNode(id: centerID, label: "", color: Color(.systemGray2), column: 1))
+
+    return (nodes, links)
+}

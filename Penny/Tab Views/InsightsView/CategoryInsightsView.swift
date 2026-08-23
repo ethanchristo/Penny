@@ -9,56 +9,6 @@ import Charts
 import SwiftData
 import SwiftUI
 
-/// One slice of the category spending pie: a single category's total expense
-/// magnitude for the current window. File-scoped so the full
-/// `CategoryInsightsView` and the compact `MiniPieChart` share a single source
-/// of truth for both the data shape and the aggregation.
-struct CategorySlice: Identifiable, Equatable {
-    let category: Category
-    let amount: Double
-
-    /// Stable across amount changes so a slice grows/shrinks in place instead
-    /// of being replaced when its total changes.
-    var id: PersistentIdentifier { category.persistentModelID }
-
-    var name: String { category.name }
-    var symbol: String { category.symbol }
-    var color: Color { category.color }
-
-    static func == (lhs: CategorySlice, rhs: CategorySlice) -> Bool {
-        lhs.id == rhs.id && lhs.amount == rhs.amount
-    }
-}
-
-/// Sums expense magnitude per category within the window. Funds and (optionally)
-/// savings are excluded via `calculateTotal`, which also handles the date
-/// windowing — so the full transaction set can be passed in unfiltered.
-/// Categories with no spend are omitted, and slices are sorted largest-first so
-/// the pie and legend read top-down by size.
-@MainActor
-func categorySpendData(
-    transactions: [Transaction],
-    categories: [Category],
-    window: (start: Date, end: Date)
-) -> [CategorySlice] {
-    let expenses = typedTransactions(for: transactions, income: false)
-
-    // Group each category's expense transactions once up front, then window-sum
-    // that small slice — rather than rescanning the full set per category.
-    var slices: [CategorySlice] = []
-    for category in categories {
-        let categoryTx = expenses.filter { $0.category == category }
-        guard !categoryTx.isEmpty else { continue }
-
-        let amount = abs(calculateTotal(for: categoryTx, start: window.start, end: window.end))
-        if amount > 0 {
-            slices.append(CategorySlice(category: category, amount: amount))
-        }
-    }
-
-    return slices.sorted { $0.amount > $1.amount }
-}
-
 struct CategoryInsightsView: View {
     @AppStorage("Home Time Range", store: .group) private var selectedTimeRange: HomeTimeRange = .monthly
 
