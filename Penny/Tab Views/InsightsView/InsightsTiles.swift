@@ -133,6 +133,11 @@ struct InsightsTiles: View {
     @State private var selectedOption: InsightsOptions?
     @State private var selectedRoute: InsightsRoute?
 
+    /// Transactions grouped by category name, rebuilt only when the transactions change
+    /// (see `.task(id:)`). Lets each category tile look up its slice in O(1) instead of
+    /// re-scanning the whole transactions array per tile on every render.
+    @State private var transactionsByCategory: [String: [Transaction]] = [:]
+
     private let columns = [
         GridItem(.adaptive(minimum: 160), spacing: 10)
     ]
@@ -191,23 +196,33 @@ struct InsightsTiles: View {
             }
         }
         .task { loadTiles() }
+        // Rebuild the category → transactions index only when the transactions change,
+        // not per tile per render (transactionsFingerprint folds in category name, so
+        // re-categorizing a transaction refires this too).
+        .task(id: transactionsFingerprint(transactions)) { rebuildCategoryIndex() }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Group {
                     if isEditing {
                         Menu {
+                            // Compute each addable list once — they filter categories/budgets
+                            // against the current tiles, and were previously read twice (the
+                            // `.isEmpty` check and the `ForEach`).
+                            let addableCats = addableCategories
+                            let addableFunds = addableFreestandingBudgets
+
                             Button("Edit Layout", systemImage: "arrow.up.arrow.down") {
                                 isEditing = true
                             }
                             
                             Divider()
                             
-                            if addableOverall || !addableCategories.isEmpty {
+                            if addableOverall || !addableCats.isEmpty {
                                 Menu("Add Budget", systemImage: "chart.bar") {
                                     if addableOverall {
                                         Button("Overall Budget") { add(.overallBudget) }
                                     }
-                                    ForEach(addableCategories) { category in
+                                    ForEach(addableCats) { category in
                                         Button("\(category.symbol)  \(category.name)") {
                                             add(.categoryBudget(category.persistentModelID))
                                         }
@@ -215,9 +230,9 @@ struct InsightsTiles: View {
                                 }
                             }
                             
-                            if !addableFreestandingBudgets.isEmpty {
+                            if !addableFunds.isEmpty {
                                 Menu("Add Custom Budget", systemImage: "rectangle.stack") {
-                                    ForEach(addableFreestandingBudgets) { budget in
+                                    ForEach(addableFunds) { budget in
                                         Button("\(budget.symbol)  \(budget.name)") {
                                             add(.fund(budget.persistentModelID))
                                         }
@@ -303,7 +318,7 @@ struct InsightsTiles: View {
 
         case .categoryBudget(let id):
             if let category = categories.first(where: { $0.persistentModelID == id }) {
-                let filtered = categoriedTransactions(for: transactions, with: category)
+                let filtered = transactionsByCategory[category.name] ?? []
                 Button {
                     selectedRoute = .categoryBudget(id)
                 } label: {
@@ -391,7 +406,7 @@ struct InsightsTiles: View {
 
         case .categoryBudget(let id):
             if let category = categories.first(where: { $0.persistentModelID == id }) {
-                SharedBudgetCell(source: .category(category, filter: categoriedTransactions(for: transactions, with: category)), interactive: false)
+                SharedBudgetCell(source: .category(category, filter: transactionsByCategory[category.name] ?? []), interactive: false)
             }
 
         case .overallBudget:
@@ -444,6 +459,18 @@ struct InsightsTiles: View {
         case .fund(let id):
             return freestandingBudgets.contains { $0.persistentModelID == id }
         }
+    }
+
+    /// Rebuilds `transactionsByCategory` (keyed by category name, matching
+    /// `categoriedTransactions`) so category tiles look up their slice instead of
+    /// re-scanning all transactions per tile.
+    private func rebuildCategoryIndex() {
+        var grouped: [String: [Transaction]] = [:]
+        for transaction in transactions {
+            guard let name = transaction.category?.name else { continue }
+            grouped[name, default: []].append(transaction)
+        }
+        transactionsByCategory = grouped
     }
 
     // MARK: - Add menu contents

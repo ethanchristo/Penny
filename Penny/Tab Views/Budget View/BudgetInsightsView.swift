@@ -208,63 +208,6 @@ struct BudgetInsightsView: View {
             .filter { occurs($0, from: start, to: end, calendar: calendar) }
     }
     
-    private struct ChartPoint: Hashable {
-        let label: String
-        let amount: Double
-    }
-    
-    private func chartData(for offset: Int) -> [ChartPoint] {
-        let dates = dateWindow(for: offset)
-        let calendar = Calendar.current
-        var points: [ChartPoint] = []
-        
-        switch selectedTimeRange {
-        case .yearly:
-            // Breakdown by Month (Jan, Feb, Mar...)
-            for month in 0..<12 {
-                guard let monthDate = calendar.date(byAdding: .month, value: month, to: dates.start) else { continue }
-                let barStart = monthDate.startOfMonth
-                let barEnd = monthDate.endOfMonth
-                
-                let total = calculateTotal(for: transactions, start: barStart, end: barEnd)
-                let label = monthDate.formatted(.dateTime.month(.abbreviated))
-                
-                points.append(ChartPoint(label: label, amount: total))
-            }
-            
-        case .monthly:
-            // Breakdown by Day (1, 2, 3...)
-            let numberOfDays = calendar.dateComponents([.day], from: dates.start, to: dates.end).day ?? 0
-            for dayOffset in 0...max(0, numberOfDays) {
-                guard let dayDate = calendar.date(byAdding: .day, value: dayOffset, to: dates.start) else { continue }
-                let barStart = dayDate.startOfDay
-                let barEnd = dayDate.endOfDay
-
-                let total = calculateTotal(for: transactions, start: barStart, end: barEnd)
-                let label = dayDate.formatted(.dateTime.day())
-                points.append(ChartPoint(label: label, amount: total))
-            }
-            
-        case .weekly:
-            // Breakdown by Day of Week (Mon, Tue...)
-            for dayOffset in 0...6 {
-                guard let dayDate = calendar.date(byAdding: .day, value: dayOffset, to: dates.start) else { continue }
-                let barStart = dayDate.startOfDay
-                let barEnd = dayDate.endOfDay
-
-                let total = calculateTotal(for: transactions, start: barStart, end: barEnd)
-                let label = dayDate.formatted(.dateTime.weekday(.abbreviated))
-                points.append(ChartPoint(label: label, amount: total))
-            }
-            
-        default:
-            let total = calculateTotal(for: transactions, start: dates.start, end: dates.end)
-            points.append(ChartPoint(label: "Total", amount: total))
-        }
-        
-        return points
-    }
-    
     private func dateWindow(for offset: Int) -> (start: Date, end: Date) {
         // Single source of truth for BudgetWindow windowing, shared with the budget
         // total and its transaction list.

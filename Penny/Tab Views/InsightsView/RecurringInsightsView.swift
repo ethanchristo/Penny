@@ -81,8 +81,22 @@ struct RecurringInsightsView: View {
             }
     }
 
-    private var windowIncome: Double { windowedRecurringTotal(income: true) }
-    private var windowExpense: Double { windowedRecurringTotal(income: false) }
+    /// Cached recurring in/out totals for the selected window. Each recompute expands
+    /// every recurrence, so rather than recomputing on every body pass (the summary
+    /// chips and sheets read these four times per render), they're stored and refreshed
+    /// only when the transactions or window change — see `.task(id: recurringTotalsKey)`.
+    @State private var windowIncome: Double = 0
+    @State private var windowExpense: Double = 0
+
+    /// Change key for the cached window totals: refires when the transactions or the
+    /// selected window move.
+    private var recurringTotalsKey: Int {
+        var hasher = Hasher()
+        hasher.combine(transactionsFingerprint(transactions))
+        hasher.combine(windowTimeRange)
+        hasher.combine(dateOffset)
+        return hasher.finalize()
+    }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -131,6 +145,12 @@ struct RecurringInsightsView: View {
         // whenever the window changes.
         .onChange(of: dateOffset) { selectedDate = nil }
         .onChange(of: windowTimeRange) { selectedDate = nil }
+        // Recompute the recurring in/out totals only when their inputs change, not on
+        // every render — each pass expands every transaction's recurrence.
+        .task(id: recurringTotalsKey) {
+            windowIncome = windowedRecurringTotal(income: true)
+            windowExpense = windowedRecurringTotal(income: false)
+        }
         .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
         .navigationTitle("Recurring")
         .navigationSubtitle(windowTimeRange.rawValue)

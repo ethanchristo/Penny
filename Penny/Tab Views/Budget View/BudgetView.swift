@@ -31,6 +31,11 @@ struct BudgetView: View {
 
     @State private var selectedRoute: BudgetRoute?
 
+    /// Transactions grouped by category name, rebuilt only when the transactions change
+    /// (see `.task(id:)`) so each category tile looks up its slice in O(1) instead of
+    /// re-scanning the whole transactions array per tile on every render.
+    @State private var transactionsByCategory: [String: [Transaction]] = [:]
+
     @State private var showAddBudget = false
     
     private enum BudgetRoute: Hashable {
@@ -184,6 +189,9 @@ struct BudgetView: View {
             }
         }
         .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+        // Rebuild the category → transactions index only when the transactions change,
+        // not per tile per render.
+        .task(id: transactionsFingerprint(transactions)) { rebuildCategoryIndex() }
         .navigationDestination(item: $selectedRoute) { route in
             switch route {
             case .overall:
@@ -284,9 +292,21 @@ struct BudgetView: View {
         .padding(.top, 20)
     }
 
+    /// Rebuilds `transactionsByCategory` (keyed by category name, matching
+    /// `categoriedTransactions`) so category tiles look up their slice instead of
+    /// re-scanning all transactions per tile.
+    private func rebuildCategoryIndex() {
+        var grouped: [String: [Transaction]] = [:]
+        for transaction in transactions {
+            guard let name = transaction.category?.name else { continue }
+            grouped[name, default: []].append(transaction)
+        }
+        transactionsByCategory = grouped
+    }
+
     @ViewBuilder
     private func categoryLink(for category: Category) -> some View {
-        let filteredTransactions = categoriedTransactions(for: transactions, with: category)
+        let filteredTransactions = transactionsByCategory[category.name] ?? []
 
         Button {
             selectedRoute = .category(category)

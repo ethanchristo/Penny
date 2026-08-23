@@ -14,7 +14,6 @@ struct CardsAndAccountsView: View {
 
     @Environment(\.modelContext) var modelContext
     
-//    @Query(filter: \Transaction.account? == nil) var primaryTransactions: [Transaction]
     @Query(sort: \Account.name) var accounts: [Account]
     
     @State private var addAccount = false

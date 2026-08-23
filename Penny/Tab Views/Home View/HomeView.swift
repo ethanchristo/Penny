@@ -517,18 +517,20 @@ struct BudgetSummaryView: View {
     private var overallSpent: Double { overallBudgetTotal(for: overallBudget, in: transactions, by: 0) }
     private var overallRemaining: Double { overallLimit - overallSpent }
 
-    /// Whether there's anything worth rendering, so the card can hide entirely otherwise.
-    private var hasContent: Bool {
-        overallBudget.isEnabled || !overspentBudgets.isEmpty || !underspentBudgets.isEmpty
-    }
-
     /// Mixes a semantic color toward the foreground so it stays legible on glass.
     private func toned(_ base: Color) -> Color {
         colorScheme == .dark ? base.mix(with: .white, by: 0.4) : base.mix(with: .black, by: 0.3)
     }
 
     var body: some View {
-        if hasContent {
+        // Compute the overspent/underspent lists once per render. Each is O(categories ×
+        // transactions); body previously read them through `hasContent`, the `.isEmpty`
+        // checks, and `budgetList`, re-running the full scan several times per pass.
+        let overspent = overspentBudgets
+        let underspent = underspentBudgets
+        let showContent = overallBudget.isEnabled || !overspent.isEmpty || !underspent.isEmpty
+
+        if showContent {
             VStack(alignment: .leading, spacing: 16) {
                 Label("Summary", systemImage: "sparkles")
                     .font(.subheadline.weight(.semibold))
@@ -538,14 +540,14 @@ struct BudgetSummaryView: View {
                     overallSection
                 }
 
-                if !overspentBudgets.isEmpty {
+                if !overspent.isEmpty {
                     if overallBudget.isEnabled { Divider().opacity(0.4) }
-                    budgetList(title: "Overspent", items: overspentBudgets, tint: .red, over: true)
+                    budgetList(title: "Overspent", items: overspent, tint: .red, over: true)
                 }
 
-                if !underspentBudgets.isEmpty {
-                    if overallBudget.isEnabled || !overspentBudgets.isEmpty { Divider().opacity(0.4) }
-                    budgetList(title: "Underspent", items: underspentBudgets, tint: .green, over: false)
+                if !underspent.isEmpty {
+                    if overallBudget.isEnabled || !overspent.isEmpty { Divider().opacity(0.4) }
+                    budgetList(title: "Underspent", items: underspent, tint: .green, over: false)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

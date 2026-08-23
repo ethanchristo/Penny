@@ -895,11 +895,6 @@ func creditCardStatement(for card: Account) -> CreditCardBalances? {
     )
 }
 
-//func accountBalances(for account: Account?) -> AccountBalances? {
-//    guard account?.accountType != .credit else { return nil }
-//    
-//}
-
 /// The date in `base`'s month whose day-of-month is `day`, clamped to the number
 /// of days in that month (so e.g. day 31 lands on Feb 28). Normalized to midnight.
 nonisolated private func dateForDay(_ day: Int, inMonthOf base: Date, calendar: Calendar) -> Date {
@@ -1112,13 +1107,6 @@ func indexEntitiesForSpotlight() async {
     // the others (the previous single do/catch silently dropped all three when
     // any one throw occurred).
     let index = CSSearchableIndex(name: "PennyEntities")
-
-//    do {
-//        let transactions = try context.fetch(FetchDescriptor<Transaction>()).map(TransactionEntity.init)
-//        try await index.indexAppEntities(transactions)
-//    } catch {
-//        log.error("Failed to index Transactions for Spotlight: \(error.localizedDescription)")
-//    }
 
     do {
         let budgets = try context.fetch(FetchDescriptor<Budget>())
