@@ -180,7 +180,33 @@ enum CategoryOptions: String, CaseIterable, Identifiable {
             name: self.rawValue,
             hexColor: self.hexColor,
             symbol: self.symbol,
-            isPreBuilt: true
+            role: self.role
         )
     }
+
+    /// The `CategoryRole` a freshly-seeded instance of this option should carry.
+    /// Payroll and Rent & Utilities get their own roles so behavior that depends on
+    /// them (e.g. pay-period anchoring) can key off a stable role instead of the
+    /// user-editable name; everything else is a generic pre-built category.
+    var role: CategoryRole {
+        switch self {
+        case .payroll: return .payroll
+        case .rentAndUtilities: return .housing
+        case .miscellaneous: return .miscellaneous
+        default: return .preBuilt
+        }
+    }
+}
+
+/// What a `Category` is for, beyond the user-visible name. Drives both which
+/// categories are locked from renaming/deletion and any role-specific behavior
+/// (e.g. `.payroll` anchors the pay-period window; see `latestPayrollDate`).
+/// Stable and independent of the category's `name`, so renaming a category never
+/// breaks the behavior tied to its role.
+enum CategoryRole: String, Codable, CaseIterable {
+    case userCreated
+    case preBuilt
+    case payroll
+    case housing
+    case miscellaneous
 }

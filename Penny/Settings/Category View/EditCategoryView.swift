@@ -24,7 +24,7 @@ struct EditCategoryView: View {
         var name: String = ""
         var symbol: String = "💰"
         var color: Color = .green
-        var isPreBuilt: Bool = false
+        var role: CategoryRole = .userCreated
 
         // Budget is a separate @Model (reference type), so the draft holds plain
         // value copies of its fields. Nothing touches the persisted Budget until save.
@@ -39,7 +39,7 @@ struct EditCategoryView: View {
                 self.name = cat.name
                 self.symbol = cat.symbol
                 self.color = cat.color
-                self.isPreBuilt = cat.isPreBuilt
+                self.role = cat.effectiveRole
 
                 if let budget = cat.budget {
                     self.hasBudget = budget.hasBudget
@@ -61,7 +61,7 @@ struct EditCategoryView: View {
             Form {
                 Section("Name & Symbol") {
                     TextField("Account Name", text: $draft.name)
-                        .disabled((draft.name == "Miscellaneous" || draft.name == "Payroll") && draft.isPreBuilt)
+                        .disabled(draft.role == .payroll || draft.role == .miscellaneous)
 
                     HStack {
                         TextField("?", text: $draft.symbol)
@@ -132,7 +132,7 @@ struct EditCategoryView: View {
 
             ToolbarSpacer(.fixed, placement: .topBarLeading)
             
-            if let existingCat = category, existingCat.name != "Miscellaneous", existingCat.name != "Payroll" {
+            if let existingCat = category, existingCat.effectiveRole != .miscellaneous, existingCat.effectiveRole != .payroll {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         modelContext.delete(existingCat)
@@ -175,7 +175,7 @@ struct EditCategoryView: View {
             let newCategory = Category(
                 name: draft.name,
                 symbol: draft.symbol,
-                isPreBuilt: draft.isPreBuilt
+                role: draft.role
             )
             newCategory.color = draft.color
             applyBudget(to: newCategory)

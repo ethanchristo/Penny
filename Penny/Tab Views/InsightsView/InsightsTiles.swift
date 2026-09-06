@@ -204,6 +204,10 @@ struct InsightsTiles: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Group {
                     if isEditing {
+                        Button("Done") {
+                            isEditing = false
+                        }
+                    } else {
                         Menu {
                             // Compute each addable list once — they filter categories/budgets
                             // against the current tiles, and were previously read twice (the
@@ -214,9 +218,9 @@ struct InsightsTiles: View {
                             Button("Edit Layout", systemImage: "arrow.up.arrow.down") {
                                 isEditing = true
                             }
-                            
+
                             Divider()
-                            
+
                             if addableOverall || !addableCats.isEmpty {
                                 Menu("Add Budget", systemImage: "chart.bar") {
                                     if addableOverall {
@@ -229,7 +233,7 @@ struct InsightsTiles: View {
                                     }
                                 }
                             }
-                            
+
                             if !addableFunds.isEmpty {
                                 Menu("Add Custom Budget", systemImage: "rectangle.stack") {
                                     ForEach(addableFunds) { budget in
@@ -239,9 +243,9 @@ struct InsightsTiles: View {
                                     }
                                 }
                             }
-                            
+
                             Divider()
-                            
+
                             Button("Hide Insights", systemImage: "eye.slash", role: .destructive) {
                                 showInsights = false
                             }
@@ -250,10 +254,6 @@ struct InsightsTiles: View {
                                 .foregroundStyle(.secondary)
                         }
                         .tint(.primary)
-                    } else {
-                        Button("Done") {
-                            isEditing.toggle()
-                        }
                     }
                 }
             }

@@ -35,12 +35,13 @@ struct PennyApp: App {
             .preferredColorScheme(currentTheme.colorScheme)
             .environment(overallBudget)
             .environment(router)
-            .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
-                OnboardingView()
-                    .fontDesign(.rounded)
-                    .preferredColorScheme(currentTheme.colorScheme)
-                    .interactiveDismissDisabled()
-            }
+            // Onboarding temporarily disabled — see PennyApp.swift.
+            // .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
+            //     OnboardingView()
+            //         .fontDesign(.rounded)
+            //         .preferredColorScheme(currentTheme.colorScheme)
+            //         .interactiveDismissDisabled()
+            // }
             .task {
                 await seedDefaultCategoriesIfNeeded()
                 await indexEntitiesForSpotlight()

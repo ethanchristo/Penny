@@ -18,6 +18,9 @@
 
 import FinanceKit
 import Foundation
+import OSLog
+
+private let log = Logger(subsystem: "com.opal.Penny", category: "financeKit")
 
 // MARK: - Snapshots (the bridge between FinanceKit and Penny)
 
@@ -112,7 +115,11 @@ struct FinanceKitClient {
         var snapshots: [FinanceKitAccountSnapshot] = []
         for account in accounts {
             let isLiability = account.liabilityAccount != nil
-            let (value, date) = signedBalance(balanceByAccount[account.id], isLiability: isLiability)
+            let creditLimit = account.liabilityAccount?.creditInformation.creditLimit?.amount
+            let rawBalance = balanceByAccount[account.id]
+            let (value, date) = signedBalance(rawBalance, isLiability: isLiability, creditLimit: creditLimit)
+            logBalanceDecoding(displayName: account.displayName, isLiability: isLiability,
+                               creditLimit: creditLimit, rawBalance: rawBalance, decoded: value)
             let transactions = try await fetchTransactions(forAccountID: account.id, since: cutoff)
             snapshots.append(
                 FinanceKitAccountSnapshot(
@@ -164,21 +171,84 @@ struct FinanceKitClient {
     ///
     /// For assets (checking/savings) the available balance — posted minus pending
     /// holds — is the most useful spendable figure, so it's preferred. For liabilities
-    /// (credit cards) the "available" balance is available *credit* (limit − owed), NOT
-    /// the amount owed; using it makes a card look like a large asset. So liabilities
-    /// prefer the booked balance, which is the real outstanding balance.
-    private static func signedBalance(_ balance: FinanceKit.AccountBalance?, isLiability: Bool) -> (Decimal, Date) {
+    /// (credit cards) the "available" balance can be available *credit* (limit − owed)
+    /// on some cards rather than the amount owed; using it raw would make a card look
+    /// like a large asset. So liabilities prefer the booked balance, which is
+    /// unambiguously the outstanding balance, whenever it's present.
+    ///
+    /// Some Wallet-linked cards (Apple Card among them) only ever report the single
+    /// `.available` case — never `.booked` or `.availableAndBooked` — so the
+    /// liability/booked preference above never gets a chance to apply. For that case,
+    /// recover the amount owed from the card's credit limit (owed = limit − available
+    /// credit) when the limit is known and sane; otherwise trust the balance's own
+    /// `creditDebitIndicator` directly rather than reporting no balance at all — Apple's
+    /// documented rule is that a liability's indicator is `.debit` when it has a spent
+    /// (owed) balance and `.credit` when it's paid off/in-credit, which applies
+    /// regardless of whether the number itself is "available" or "booked".
+    private static func signedBalance(_ balance: FinanceKit.AccountBalance?,
+                                      isLiability: Bool,
+                                      creditLimit: Decimal?) -> (Decimal, Date) {
         guard let balance else { return (0, .now) }
-        let picked: FinanceKit.Balance
         switch balance.currentBalance {
-        case .available(let b): picked = b
-        case .booked(let b): picked = b
+        case .available(let b):
+            return (liabilityAwareMagnitude(b, isLiability: isLiability, creditLimit: creditLimit), b.asOfDate)
+        case .booked(let b):
+            return (signedMagnitude(b), b.asOfDate)
         case .availableAndBooked(let available, let booked):
-            picked = isLiability ? booked : available
-        @unknown default: return (0, .now)
+            let picked = isLiability ? booked : available
+            return (signedMagnitude(picked), picked.asOfDate)
+        @unknown default:
+            return (0, .now)
         }
-        let magnitude = picked.amount.amount
-        let signed = picked.creditDebitIndicator == .credit ? magnitude : -magnitude
-        return (signed, picked.asOfDate)
+    }
+
+    /// A `Balance`'s amount, signed by its credit/debit indicator (credit positive,
+    /// debit negative). Only meaningful for a balance actually being reported as this
+    /// account's real balance (not for a liability's "available credit" figure, whose
+    /// magnitude means something different — see `liabilityAwareMagnitude`).
+    private static func signedMagnitude(_ b: FinanceKit.Balance) -> Decimal {
+        b.creditDebitIndicator == .credit ? b.amount.amount : -b.amount.amount
+    }
+
+    /// `signedMagnitude`, but for a liability's "available" figure, which some cards
+    /// report as available credit rather than the amount owed. Prefers deriving owed
+    /// from the credit limit when it's known and the numbers are plausible (limit
+    /// positive and at least as large as the reported figure); falls back to trusting
+    /// the indicator directly otherwise, so a missing/odd credit limit never silently
+    /// produces a $0 balance.
+    private static func liabilityAwareMagnitude(_ b: FinanceKit.Balance, isLiability: Bool, creditLimit: Decimal?) -> Decimal {
+        guard isLiability else { return signedMagnitude(b) }
+        if let creditLimit, creditLimit > 0, b.amount.amount <= creditLimit {
+            return b.amount.amount - creditLimit
+        }
+        return signedMagnitude(b)
+    }
+
+    /// Logs the raw FinanceKit balance alongside Penny's decoded figure for every
+    /// account on each sync, so a wrong balance can be diagnosed from Console (filter
+    /// by subsystem "com.opal.Penny", category "financeKit") without guesswork about
+    /// which `CurrentBalance` case or credit/debit indicator Wallet actually reported.
+    private static func logBalanceDecoding(displayName: String, isLiability: Bool, creditLimit: Decimal?,
+                                           rawBalance: FinanceKit.AccountBalance?, decoded: Decimal) {
+        guard let rawBalance else {
+            log.info("FinanceKit balance for \(displayName, privacy: .public): no AccountBalance record at all")
+            return
+        }
+        let caseDescription: String
+        switch rawBalance.currentBalance {
+        case .available(let b):
+            caseDescription = "available(amount: \(b.amount.amount), indicator: \(String(describing: b.creditDebitIndicator)))"
+        case .booked(let b):
+            caseDescription = "booked(amount: \(b.amount.amount), indicator: \(String(describing: b.creditDebitIndicator)))"
+        case .availableAndBooked(let available, let booked):
+            caseDescription = "availableAndBooked(available: \(available.amount.amount)/\(String(describing: available.creditDebitIndicator)), booked: \(booked.amount.amount)/\(String(describing: booked.creditDebitIndicator)))"
+        @unknown default:
+            caseDescription = "unknown"
+        }
+        log.info("""
+            FinanceKit balance for \(displayName, privacy: .public): isLiability=\(isLiability), \
+            creditLimit=\(creditLimit.map(String.init(describing:)) ?? "nil", privacy: .public), \
+            currentBalance=\(caseDescription, privacy: .public) -> decoded=\(String(describing: decoded), privacy: .public)
+            """)
     }
 }

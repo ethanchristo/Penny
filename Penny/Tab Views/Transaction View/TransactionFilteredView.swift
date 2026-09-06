@@ -214,7 +214,7 @@ struct TransactionFilteredView: View {
                     .matchedTransitionSource(id: transaction.id, in: namespace)
                     .contextMenu {
                         Button(role: .destructive) {
-                            deleteTransaction(transaction)
+                            pendingDeletion = transaction
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
@@ -228,6 +228,25 @@ struct TransactionFilteredView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: showBudgetSection)
         .sensoryFeedback(.impact(weight: .light), trigger: showUpcomingSection)
         .sensoryFeedback(.impact(weight: .light), trigger: showRecurringSection)
+        .alert(
+            "Delete Transaction?",
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { isPresented in if !isPresented { pendingDeletion = nil } }
+            )
+        ) {
+            Button("Delete", role: .destructive) {
+                if let transaction = pendingDeletion {
+                    deleteTransaction(transaction)
+                }
+                pendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDeletion = nil
+            }
+        } message: {
+            Text("This can't be undone.")
+        }
     }
     
     @ViewBuilder
@@ -256,7 +275,7 @@ struct TransactionFilteredView: View {
                 .matchedTransitionSource(id: transaction.id, in: namespace)
                 .contextMenu {
                     Button(role: .destructive) {
-                        deleteTransaction(transaction)
+                        pendingDeletion = transaction
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -324,7 +343,7 @@ struct TransactionFilteredView: View {
                     .matchedTransitionSource(id: transaction.id, in: namespace)
                     .contextMenu {
                         Button(role: .destructive) {
-                            deleteTransaction(transaction)
+                            pendingDeletion = transaction
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
@@ -367,7 +386,7 @@ struct TransactionFilteredView: View {
                 .matchedTransitionSource(id: transaction.id, in: namespace)
                 .contextMenu {
                     Button(role: .destructive) {
-                        deleteTransaction(transaction)
+                        pendingDeletion = transaction
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -400,7 +419,7 @@ struct TransactionFilteredView: View {
                     .matchedTransitionSource(id: transaction.id, in: namespace)
                     .contextMenu {
                         Button(role: .destructive) {
-                            deleteTransaction(transaction)
+                            pendingDeletion = transaction
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
@@ -430,7 +449,7 @@ struct TransactionFilteredView: View {
                             .matchedTransitionSource(id: transaction.id, in: namespace)
                             .contextMenu {
                                 Button(role: .destructive) {
-                                    deleteTransaction(transaction)
+                                    pendingDeletion = transaction
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }

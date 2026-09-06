@@ -65,6 +65,7 @@ struct SingleTransactionView: View {
     
     @State private var editMode: Bool = false
     @State private var draft = Draft()
+    @State private var showDeleteConfirmation = false
 
     let initialEditMode: Bool
     let transaction: Transaction?
@@ -133,13 +134,9 @@ struct SingleTransactionView: View {
             ToolbarSpacer(.fixed, placement: .topBarLeading)
             
             ToolbarItem(placement: .topBarLeading) {
-                if let existingTx = transaction {
+                if transaction != nil {
                     Button("Delete", systemImage: "trash") {
-                        if let externalID = existingTx.externalID {
-                            SimpleFINConfig.dismissExternalID(externalID)
-                        }
-                        modelContext.delete(existingTx)
-                        dismiss()
+                        showDeleteConfirmation = true
                     }
                     .tint(Color(.systemRed))
                 }
@@ -164,8 +161,22 @@ struct SingleTransactionView: View {
                 }
             }
         }
+        .alert("Delete Transaction?", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                if let existingTx = transaction {
+                    if let externalID = existingTx.externalID {
+                        SimpleFINConfig.dismissExternalID(externalID)
+                    }
+                    modelContext.delete(existingTx)
+                }
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This can't be undone.")
+        }
     }
-        
+
     private func loadTransaction() -> Void {
         // Find the fallback category once
         let miscCategory = categories.first(where: { $0.name == "Miscellaneous" })
@@ -283,7 +294,6 @@ struct EditTransactionView: View {
 
     @Binding fileprivate var draft: Draft
 
-    @State private var isEndDate: Bool = false
     @State private var inputAmount: String = ""
 
     @State private var showNotesSheet: Bool = false
@@ -358,7 +368,7 @@ struct EditTransactionView: View {
                     .padding(.horizontal, 7)
                     .glassEffect(.regular)
             }
-            
+
             Spacer()
             
             HStack {
@@ -633,18 +643,18 @@ struct EditTransactionView: View {
 
                     Section {
                         if draft.recurrence != .none {
-                            Toggle("End Date", isOn: $isEndDate)
-                                .onChange(of: isEndDate) {
-                                    if isEndDate {
-                                        // Initialize with the current transaction date at start of day
-                                        draft.endDate = draft.date.endOfDay
-                                    } else {
-                                        draft.endDate = nil
+                            Toggle(
+                                "End Date",
+                                isOn: Binding(
+                                    get: { draft.endDate != nil },
+                                    set: { isOn in
+                                        draft.endDate = isOn ? draft.date.endOfDay : nil
                                     }
-                                }
+                                )
+                            )
                         }
-                        
-                        if isEndDate {
+
+                        if draft.endDate != nil {
                             DatePicker(
                                 "End Date",
                                 selection: Binding(
@@ -851,7 +861,7 @@ struct ShowTransactionView: View {
                     
                     Divider()
                 }
-                
+
                 HStack(alignment: .firstTextBaseline) {
                     Label("\(draft.account?.accountType.rawValue ?? "Checking Account")", systemImage: "creditcard")
                         .foregroundStyle(.secondary)

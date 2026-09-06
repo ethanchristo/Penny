@@ -374,7 +374,7 @@ nonisolated func payPeriodBounds(containing date: Date = .now, offset: Int = 0) 
 @MainActor func latestPayrollDate(from transactions: [Transaction]? = nil) -> Date? {
     let txns = transactions ?? (try? SharedDatabase.shared.container.mainContext.fetch(FetchDescriptor<Transaction>())) ?? []
     return txns
-        .filter { $0.category?.name.caseInsensitiveCompare("Payroll") == .orderedSame }
+        .filter { $0.category?.effectiveRole == .payroll }
         .map(\.date)
         .max()?
         .startOfDay
@@ -584,12 +584,16 @@ nonisolated func netTotalAggregate(for transactions: [Transaction], budgets: [Bu
 /// each card's full outstanding balance, `.statement` subtracts only its last closed
 /// statement (amount due). When a bank sync has reported a live balance for an account
 /// it is the source of truth (checking included); otherwise the figure is derived
-/// from that account's transactions. Nonisolated so it runs on `StatsCalculator`.
+/// from that account's transactions. Unless `include_installment_balance` is on, each
+/// card's manually entered installment-plan balance is then subtracted back out, since
+/// bank-sync balances have no way to report it separately. Nonisolated so it runs on
+/// `StatsCalculator`.
 nonisolated func netTotalBreakdown(for transactions: [Transaction], budgets: [Budget]) -> NetTotalBreakdown {
     let defaults = UserDefaults.group
     let mode = CreditCardBalanceType(rawValue: defaults.string(forKey: "net_total_credit_mode") ?? "") ?? .balance
     let includeUpcoming = defaults.object(forKey: "net_total_include_upcoming") as? Bool ?? true
     let includeSavings = defaults.object(forKey: "savings_total") as? Bool ?? false
+    let includeInstallmentBalance = defaults.object(forKey: "include_installment_balance") as? Bool ?? false
     // Read the bank-sync live balances straight from the App Group (keys mirror
     // `SimpleFINConfig` / `FinanceKitConfig`) so this stays usable from the widget
     // target, which links neither client. FinanceKit ids are namespaced
@@ -648,7 +652,7 @@ nonisolated func netTotalBreakdown(for transactions: [Transaction], budgets: [Bu
     // never subtracted from a single card's current balance.
     var creditItems: [NetTotalBreakdown.Item] = []
     for card in Set(creditTxns.compactMap({ $0.account })) {
-        let owed: Double
+        var owed: Double
         switch mode {
         case .statement:
             owed = creditCardOwed(for: card, transactions: creditTxns, includeReserved: true).due
@@ -660,6 +664,13 @@ nonisolated func netTotalBreakdown(for transactions: [Transaction], budgets: [Bu
             } else {
                 owed = creditCardOwed(for: card, transactions: creditTxns, includeReserved: true).total
             }
+        }
+        // Bank-sync balances (and this card's own transaction history) lump an
+        // installment plan's remaining balance in with the rest of what's owed, with
+        // no way to separate it out from the API alone. When the setting is off,
+        // subtract the manually entered installment balance back out.
+        if !includeInstallmentBalance {
+            owed = max(0, owed - card.installmentBalance)
         }
         let label = card.name.isEmpty ? "Credit card" : card.name
         creditItems.append(.init(id: "card-\(card.externalID ?? card.name)", label: label, value: -owed))
@@ -1028,10 +1039,24 @@ func seedDefaultCategoriesIfNeeded() async {
     let context = SharedDatabase.shared.container.mainContext
 
     do {
-        // Fast path: if this device already has the prebuilt categories there is
-        // nothing to do. Covers every launch after the first without any delay.
         let initial = try context.fetch(FetchDescriptor<Category>())
-        if initial.filter({ $0.isPreBuilt }).count >= 2 {
+
+        // One-time-per-device backfill: `role` is nil for categories created before
+        // it existed, or synced down from a device that hasn't updated yet. Recover
+        // the role of known pre-built categories by name so they don't get treated as
+        // missing and re-seeded as duplicates below, and so role-specific behavior
+        // (e.g. payroll detection) keeps working after the migration; anything else
+        // becomes explicitly `.userCreated`. Cheap no-op on every launch after the
+        // first, since roles stick once assigned.
+        let roleByName = Dictionary(uniqueKeysWithValues: CategoryOptions.allCases.map { ($0.rawValue, $0.role) })
+        for category in initial where category.role == nil {
+            category.role = roleByName[category.name] ?? .userCreated
+        }
+
+        // Fast path: if this device already has the prebuilt categories there is
+        // nothing else to do. Covers every launch after the first without any delay.
+        if initial.filter({ $0.effectiveRole != .userCreated }).count >= 2 {
+            try context.save()
             return
         }
 
@@ -1045,11 +1070,11 @@ func seedDefaultCategoriesIfNeeded() async {
         let allCategories = try context.fetch(FetchDescriptor<Category>())
 
         if !allCategories.contains(where: { $0.name == "Miscellaneous" }) {
-            let miscCategory = Category(name: "Miscellaneous", hexColor: "#8E8E93", symbol: "📦", isPreBuilt: true)
+            let miscCategory = Category(name: "Miscellaneous", hexColor: "#8E8E93", symbol: "📦", role: .miscellaneous)
             context.insert(miscCategory)
         }
 
-        let preBuiltCount = allCategories.filter { $0.isPreBuilt }.count
+        let preBuiltCount = allCategories.filter { $0.effectiveRole != .userCreated }.count
 
         if preBuiltCount < 2 {
             for option in CategoryOptions.allCases where option.rawValue != "Miscellaneous" {

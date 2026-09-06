@@ -11,7 +11,7 @@ import SwiftUI
 // MARK: - Category
 @Model
 class Category {
-    #Index<Category>([\.name], [\.isPreBuilt])
+    #Index<Category>([\.name], [\.role])
 
     // Stable, store-independent identifier. Used as the `id` for CategoryEntity so
     // App Intents / Spotlight can resolve a category across the process boundary,
@@ -27,8 +27,21 @@ class Category {
 
     @Relationship(deleteRule: .cascade, inverse: \CategoryRules.category)
     var rules: [CategoryRules]?
-    var isPreBuilt: Bool = false
-    
+
+    /// Optional (rather than defaulting to `.userCreated`) so rows written before
+    /// this property existed — or synced in from a device still running an older
+    /// schema — decode to `nil` instead of crashing SwiftData's generated
+    /// non-optional accessor. CloudKit-backed stores can't rename a property during
+    /// migration, so this keeps the original `role` name and pushes the default onto
+    /// `effectiveRole` instead of a differently-named backing property.
+    var role: CategoryRole?
+
+    /// `role`, defaulting to `.userCreated` for records that have no value set yet.
+    /// Prefer this over `role` everywhere except code that specifically needs to
+    /// distinguish "never assigned" from "explicitly user-created" (the migration
+    /// backfill in `seedDefaultCategoriesIfNeeded`).
+    var effectiveRole: CategoryRole { role ?? .userCreated }
+
     @Transient
     var color: Color {
         get {
@@ -42,13 +55,13 @@ class Category {
     @Relationship(deleteRule: .nullify, inverse: \Transaction.categoryValue)
         var transactions: [Transaction]?
     
-    init(name: String = "", budget: Budget? = nil, hexColor: String = "#32D74B", symbol: String = "💰", rules: [CategoryRules] = [], isPreBuilt: Bool = false) {
+    init(name: String = "", budget: Budget? = nil, hexColor: String = "#32D74B", symbol: String = "💰", rules: [CategoryRules] = [], role: CategoryRole = .userCreated) {
         self.name = name
         self.budget = budget ?? Budget(hasBudget: false, budget: 0.0, budgetWindow: .monthly)
         self.hexColor = hexColor
         self.symbol = symbol
         self.rules = rules
-        self.isPreBuilt = isPreBuilt
+        self.role = role
     }
 }
 

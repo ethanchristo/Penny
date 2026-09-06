@@ -283,6 +283,8 @@ struct AccountCell: View {
 }
 
 struct EditAccountView: View {
+    @AppStorage("currency_symbol", store: .group) private var currencySymbol: String = "$"
+
     @Environment(\.modelContext) var modelContext
     @Environment(\.dismiss) var dismiss
 
@@ -293,6 +295,7 @@ struct EditAccountView: View {
     @State private var draftClosingDate: Int = 1
     @State private var draftDueDate: Int = 1
     @State private var draftUseAvailableBalance = false
+    @State private var draftInstallmentBalance: Double = 0.0
     @State private var draftLinkedID: String?
 
     @State private var newAccount = false
@@ -382,6 +385,20 @@ struct EditAccountView: View {
                 } footer: {
                     Text("Select the day of the month of your credit card's due date.")
                 }
+
+                Section {
+                    HStack(alignment: .firstTextBaseline, spacing: 1) {
+                        Text(currencySymbol)
+                            .foregroundStyle(.secondary)
+
+                        TextField("0.00", value: $draftInstallmentBalance, format: .number)
+                            .keyboardType(.decimalPad)
+                    }
+                } header: {
+                    Text("Installment Balance")
+                } footer: {
+                    Text("If this card has an installment plan (e.g. Apple Card Monthly Installments), enter its remaining balance here. Turn off \"Include Installment Balances\" in Net Total settings to leave it out of your net total.")
+                }
             }
         }
         .onAppear(perform: loadAccount)
@@ -431,6 +448,7 @@ struct EditAccountView: View {
             draftClosingDate = existingAccount.closingDate ?? 1
             draftDueDate = existingAccount.dueDate ?? 1
             draftUseAvailableBalance = existingAccount.useAvailableBalance
+            draftInstallmentBalance = existingAccount.installmentBalance
             draftLinkedID = existingAccount.externalID
         }
     }
@@ -442,13 +460,15 @@ struct EditAccountView: View {
             existingAccount.accountType = draftAccountType
             existingAccount.closingDate = draftClosingDate
             existingAccount.dueDate = draftDueDate
+            existingAccount.installmentBalance = draftInstallmentBalance
             target = existingAccount
         } else {
             let newAccount = Account(
                 name: draftName,
                 accountType: draftAccountType,
                 closingDate: draftClosingDate,
-                dueDate: draftDueDate
+                dueDate: draftDueDate,
+                installmentBalance: draftInstallmentBalance
                 )
 
             modelContext.insert(newAccount)

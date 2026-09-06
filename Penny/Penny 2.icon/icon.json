@@ -38,10 +38,28 @@
         {
           "fill" : {
             "linear-gradient" : [
+              "display-p3:0.89066,0.54718,0.29756,1.00000",
+              "display-p3:0.64332,0.39602,0.20927,0.55838"
+            ]
+          },
+          "image-name" : "Ellipse 7.png",
+          "name" : "Ellipse 7",
+          "position" : {
+            "scale" : 1.26,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "linear-gradient" : [
               "display-p3:0.93168,0.53241,0.30452,0.90000",
               "display-p3:0.69611,0.39779,0.22753,0.90000"
             ]
           },
+          "hidden" : true,
           "image-name" : "Rectangle 1.png",
           "name" : "Rectangle 1",
           "position" : {

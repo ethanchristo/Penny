@@ -26,6 +26,10 @@ struct SettingsView: View {
     // How credit cards count against the net total: their full outstanding balance
     // (Total Balance) or just the last closed statement's amount due (Amount Due).
     @AppStorage("net_total_credit_mode", store: .group) private var creditMode: CreditCardBalanceType = .balance
+    // When off (default), each card's manually entered installment-plan balance
+    // (e.g. Apple Card Monthly Installments) is subtracted out of its net total
+    // contribution, since bank-sync balances lump it in with the rest of the card.
+    @AppStorage("include_installment_balance", store: .group) private var includeInstallmentBalance: Bool = false
     @AppStorage("show_insights") private var showInsights: Bool = true
     // Controls whether the first-launch onboarding flow is shown. Resetting it
     // re-presents onboarding on the next app launch.
@@ -251,6 +255,10 @@ struct SettingsView: View {
                 Toggle("Include Upcoming Recurring", isOn: $includeUpcoming)
 
                 Toggle("Include Savings", isOn: $savingsTotal)
+
+                Toggle("Include Installment Balances", isOn: $includeInstallmentBalance)
+            } footer: {
+                Text("When off, each card's installment plan balance (set per-card in Cards & Accounts) is left out of the net total.")
             }
             .toggleStyle(SwitchToggleStyle(tint: .accentColor))
 
