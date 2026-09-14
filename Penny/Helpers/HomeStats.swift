@@ -64,3 +64,21 @@ func transactionsFingerprint(_ transactions: [Transaction]) -> Int {
     }
     return hasher.finalize()
 }
+
+/// Fingerprint of the housing entries that feed `housingAllTimeTotal()`, so adding,
+/// editing, or ending a rent/mortgage entry refreshes the net total.
+@MainActor func housingsFingerprint(_ housings: [Housing]) -> Int {
+    var hasher = Hasher()
+    for housing in housings {
+        hasher.combine(housing.id)
+        hasher.combine(housing.amount)
+        hasher.combine(housing.startDate)
+        hasher.combine(housing.endDate)
+        hasher.combine(housing.frequency)
+        hasher.combine(housing.includeUpcoming)
+        hasher.combine(housing.leadDays)
+        hasher.combine(housing.matchNotes)
+        hasher.combine(housing.account?.externalID)
+    }
+    return hasher.finalize()
+}

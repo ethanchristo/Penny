@@ -618,9 +618,13 @@ enum SimpleFINStore {
     private static let account = "access-url"
 
     private static var baseQuery: [String: Any] {
+        // Synchronizable so the Access URL follows the user to their other
+        // devices via iCloud Keychain (requires the user's iCloud Keychain
+        // setting to be on; no app entitlement needed).
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service,
-         kSecAttrAccount as String: account]
+         kSecAttrAccount as String: account,
+         kSecAttrSynchronizable as String: true]
     }
 
     static func saveAccessURL(_ value: String) {

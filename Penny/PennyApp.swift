@@ -30,7 +30,7 @@ struct PennyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            ContentView()
             .fontDesign(.rounded)
             .preferredColorScheme(currentTheme.colorScheme)
             .environment(overallBudget)

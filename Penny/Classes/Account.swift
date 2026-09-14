@@ -35,6 +35,12 @@ class Account {
     @Relationship(deleteRule: .nullify, inverse: \Transaction.account)
     var transactions: [Transaction]?
 
+    /// Housing entries (rent/mortgage) linked to this account. Required so the
+    /// `Housing.account` relationship has a declared inverse — CloudKit mirroring
+    /// rejects the whole model container if any relationship lacks one.
+    @Relationship(deleteRule: .nullify, inverse: \Housing.account)
+    var housings: [Housing]?
+
     var rules: [CategoryRules]?
 
     init(name: String = "", accountType: AccountType = .checking, closingDate: Int? = 1, dueDate: Int? = 1, externalID: String? = nil, useAvailableBalance: Bool = false, installmentBalance: Double = 0.0) {

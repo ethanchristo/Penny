@@ -65,7 +65,8 @@ struct NetTotalView: View {
     /// fetched on demand (only when the sheet opens) since the reserve depends on them.
     private func computeBreakdown() -> NetTotalBreakdown {
         let budgets = (try? modelContext.fetch(FetchDescriptor<Budget>())) ?? []
-        return netTotalBreakdown(for: transactions, budgets: budgets)
+        let housings = (try? modelContext.fetch(FetchDescriptor<Housing>())) ?? []
+        return netTotalBreakdown(for: transactions, budgets: budgets, housings: housings)
     }
 
     var body: some View {

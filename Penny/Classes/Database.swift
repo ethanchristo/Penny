@@ -31,7 +31,7 @@ class SharedDatabase {
 
         do {
             container = try ModelContainer(
-                for: Transaction.self, Account.self, Category.self, Budget.self, CategoryRules.self,
+                for: Transaction.self, Account.self, Category.self, Budget.self, CategoryRules.self, Housing.self,
                 configurations: configuration
             )
         } catch {
@@ -63,11 +63,12 @@ actor StatsCalculator {
         // Only freestanding budgets reserve against the net total; category budgets
         // don't, so the reserve helpers filter on `isFreestanding` anyway.
         let budgets = (try? modelContext.fetch(FetchDescriptor<Budget>())) ?? []
+        let housings = (try? modelContext.fetch(FetchDescriptor<Housing>())) ?? []
 
         return NetTotals(
-            income: netTotalAllTime(for: transactions, isIncome: true, budgets: budgets),
-            expenses: netTotalAllTime(for: transactions, isIncome: false, budgets: budgets),
-            total: netTotalAggregate(for: transactions, budgets: budgets)
+            income: netTotalAllTime(for: transactions, isIncome: true, budgets: budgets, housings: housings),
+            expenses: netTotalAllTime(for: transactions, isIncome: false, budgets: budgets, housings: housings),
+            total: netTotalAggregate(for: transactions, budgets: budgets, housings: housings)
         )
     }
 }

@@ -441,7 +441,7 @@ nonisolated func payPeriodBounds(containing date: Date = .now, offset: Int = 0) 
 /// Nonisolated so it can run on a background `ModelActor` (see `StatsCalculator`) as
 /// well as the main thread. `budgets` is required — the caller passes the budgets fetched
 /// from the same context as `transactions`, so no context-crossing fetch is needed.
-nonisolated func netTotalAllTime(for transactions: [Transaction], isIncome: Bool?, budgets: [Budget]) -> Double {
+nonisolated func netTotalAllTime(for transactions: [Transaction], isIncome: Bool?, budgets: [Budget], housings: [Housing] = []) -> Double {
     let includeUpcoming = UserDefaults.group.object(forKey: "net_total_include_upcoming") as? Bool ?? true
     let filtered = typedTransactions(for: transactions, income: isIncome)
 
@@ -455,7 +455,102 @@ nonisolated func netTotalAllTime(for transactions: [Transaction], isIncome: Bool
     var total = calculateTotal(for: nonRecurring, start: .distantPast, end: now)
     total += calculateTotal(for: recurring, start: .distantPast, end: recurringEnd)
 
+    // Housing (rent/mortgage) is expense-only, so it never touches the income breakdown.
+    if isIncome != true { total -= housingAllTimeTotal(for: housings, transactions: transactions) }
+
     return isIncome == nil ? total - budgetReserveTotal(for: budgets) : total
+}
+
+/// Whether `housing`'s chosen account has a real bank feed behind it — either a specific
+/// `Account` with an `externalID`, or the primary checking bucket (`housing.account ==
+/// nil`, mirroring the app-wide convention that a nil `Transaction.account` means primary
+/// checking) when SimpleFIN/FinanceKit has designated a checking account for it. Reads the
+/// raw App Group keys directly (mirroring `BankSyncMapping.primaryCheckingID`) rather than
+/// depending on that type, since this file is also compiled into the widget target, which
+/// doesn't link the SimpleFIN/FinanceKit client code that type lives alongside.
+nonisolated private func housingAccountIsImportLinked(_ housing: Housing) -> Bool {
+    if let account = housing.account { return account.externalID != nil }
+    let defaults = UserDefaults.group
+    return defaults.string(forKey: "simplefin_checking_id") != nil
+        || defaults.string(forKey: "financekit_checking_id") != nil
+}
+
+/// Whether `transaction` is the real (bank-imported) posting of `housing`'s payment —
+/// matched by notes + amount on the housing's own linked account (which may be the nil
+/// "primary checking" bucket). Only meaningful once the user has linked a transaction
+/// once (`housing.matchNotes` is set) and the account is import-linked; a manually-added/
+/// unlinked account never matches, so its occurrences are never skipped.
+nonisolated private func housingPaymentMatches(_ transaction: Transaction, housing: Housing) -> Bool {
+    guard housingAccountIsImportLinked(housing) else { return false }
+    guard let matchNotes = housing.matchNotes, !matchNotes.isEmpty else { return false }
+    return transaction.account == housing.account
+        && transaction.notes == matchNotes
+        && abs(abs(transaction.amount) - housing.amount) < 0.005
+}
+
+/// All-time cost of `housings` (rent/mortgage payments), summed the same way a recurring
+/// expense Transaction is: through today, extended ahead of an upcoming occurrence's due
+/// date by that entry's own `leadDays` when `includeUpcoming` is on (both configurable per
+/// housing entry — see `Housing`). Always a positive magnitude — callers subtract it from
+/// the net total.
+///
+/// When `housing`'s account is import-linked (SimpleFIN/FinanceKit — see
+/// `housingAccountIsImportLinked`), every PAST occurrence is already reflected in that
+/// account's own balance via its real, bank-synced transactions, so only the not-yet-
+/// happened upcoming occurrence (within `leadDays`, when `includeUpcoming` is on) is
+/// projected here — summing all of history too would double-count everything the bank
+/// feed already carries. Without an import link (manually-tracked account, or none at
+/// all), there's no such feed, so every occurrence that's ever happened still counts,
+/// same as a manually-entered recurring Transaction always has.
+///
+/// Either way, an occurrence whose period already contains a real transaction matching
+/// the user's one-time `matchNotes` link is skipped regardless — covers the case where a
+/// payment posts a little early or late relative to its scheduled date.
+nonisolated func housingAllTimeTotal(for housings: [Housing], transactions: [Transaction] = []) -> Double {
+    guard !housings.isEmpty else { return 0 }
+    let now = Date().endOfDay
+    let today = Date.now.startOfDay
+    let calendar = Calendar.current
+
+    return housings.reduce(0.0) { runningTotal, housing in
+        let end: Date = housing.includeUpcoming
+            ? (calendar.date(byAdding: .day, value: housing.leadDays, to: now) ?? now)
+            : now
+
+        // Import-linked housing skips everything before today — that history is already
+        // in the account's own balance. Manually-tracked housing sums from the very start.
+        let windowStart = housingAccountIsImportLinked(housing) ? today : calendar.startOfDay(for: housing.startDate)
+
+        var occurrenceDate = calendar.startOfDay(for: housing.startDate)
+        if let housingEnd = housing.endDate, calendar.startOfDay(for: housingEnd) < occurrenceDate { return runningTotal }
+        guard occurrenceDate <= end else { return runningTotal }
+
+        let actualEndDate = housing.endDate.map { min(end, calendar.startOfDay(for: $0)) } ?? end
+        let recurrence = housing.frequency.asRecurrence
+
+        var housingTotal = 0.0
+        while occurrenceDate <= actualEndDate {
+            let nextOccurrence = calculateNextDate(from: occurrenceDate, frequency: recurrence)
+            let periodEnd = nextOccurrence ?? (calendar.date(byAdding: .day, value: 1, to: occurrenceDate) ?? occurrenceDate)
+
+            // Skip occurrences before the window (already reflected elsewhere for
+            // import-linked housing) and any whose period already contains the matching
+            // real payment — that's already counted through the normal transaction total.
+            let alreadyPosted = occurrenceDate < windowStart || transactions.contains { transaction in
+                housingPaymentMatches(transaction, housing: housing)
+                    && transaction.date >= occurrenceDate
+                    && transaction.date < periodEnd
+            }
+            if !alreadyPosted {
+                housingTotal += housing.amount
+            }
+
+            guard let next = nextOccurrence else { break }
+            occurrenceDate = next
+        }
+
+        return runningTotal + housingTotal
+    }
 }
 
 /// Amount owed on a single credit card, from its own transactions and its
@@ -566,8 +661,8 @@ struct NetTotalBreakdown: Sendable {
 /// savings-if-enabled) − credit-card debt − fund reserve, all-time and optionally
 /// extended to the next payday for recurring transactions. Thin wrapper over
 /// `netTotalBreakdown` so the displayed total and its breakdown can never drift.
-nonisolated func netTotalAggregate(for transactions: [Transaction], budgets: [Budget]) -> Double {
-    netTotalBreakdown(for: transactions, budgets: budgets).total
+nonisolated func netTotalAggregate(for transactions: [Transaction], budgets: [Budget], housings: [Housing] = []) -> Double {
+    netTotalBreakdown(for: transactions, budgets: budgets, housings: housings).total
 }
 
 /// Same computation as `netTotalAggregate`, but returns the individual components
@@ -588,7 +683,7 @@ nonisolated func netTotalAggregate(for transactions: [Transaction], budgets: [Bu
 /// card's manually entered installment-plan balance is then subtracted back out, since
 /// bank-sync balances have no way to report it separately. Nonisolated so it runs on
 /// `StatsCalculator`.
-nonisolated func netTotalBreakdown(for transactions: [Transaction], budgets: [Budget]) -> NetTotalBreakdown {
+nonisolated func netTotalBreakdown(for transactions: [Transaction], budgets: [Budget], housings: [Housing] = []) -> NetTotalBreakdown {
     let defaults = UserDefaults.group
     let mode = CreditCardBalanceType(rawValue: defaults.string(forKey: "net_total_credit_mode") ?? "") ?? .balance
     let includeUpcoming = defaults.object(forKey: "net_total_include_upcoming") as? Bool ?? true
@@ -707,6 +802,17 @@ nonisolated func netTotalBreakdown(for transactions: [Transaction], budgets: [Bu
         )
     }
 
+    // MARK: Housing — one item per rent/mortgage entry, stored negative. Each item is
+    // that entry's full cost since its start date, extended ahead of its due date by its
+    // own lead-days setting when upcoming inclusion is on (see `housingAllTimeTotal`).
+    let housingItems = housings.map { housing in
+        NetTotalBreakdown.Item(
+            id: "housing-\(housing.id.uuidString)",
+            label: housing.name.isEmpty ? (housing.mortgage ? "Mortgage" : "Rent") : housing.name,
+            value: -housingAllTimeTotal(for: [housing], transactions: transactions)
+        )
+    }
+
     var groups: [NetTotalBreakdown.Group] = []
     groups.append(.init(id: "assets", title: "Accounts", items: assetItems))
     if !creditItems.isEmpty {
@@ -714,6 +820,9 @@ nonisolated func netTotalBreakdown(for transactions: [Transaction], budgets: [Bu
     }
     if !upcomingItems.isEmpty {
         groups.append(.init(id: "upcoming", title: "Upcoming recurring", items: upcomingItems))
+    }
+    if !housingItems.isEmpty {
+        groups.append(.init(id: "housing", title: "Housing", items: housingItems))
     }
     if !reserveItems.isEmpty {
         groups.append(.init(id: "reserve", title: "Budget reserve", items: reserveItems))

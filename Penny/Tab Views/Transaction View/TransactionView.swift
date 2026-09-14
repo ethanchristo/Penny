@@ -39,6 +39,11 @@ struct TransactionView: View {
     @State private var sortOrder: CustomSortOrder = .dateReverse
     @State private var grouping: TransactionGrouping = .day
 
+    /// Tints the view's background to match Home's net-total color when shown
+    /// side by side with it in the `.regular` size class. Defaults to clear so
+    /// standalone pushes (e.g. from "View All") stay untinted.
+    var backgroundColor: Color = .clear
+
     private enum CustomSortOrder {
         case dateReverse
         case dateForward
@@ -106,6 +111,14 @@ struct TransactionView: View {
             .searchable(text: $searchText)
         }
         .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+        .background {
+            LinearGradient(
+                colors: [backgroundColor.opacity(0.7), .clear, .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
         .navigationTitle("Transactions")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

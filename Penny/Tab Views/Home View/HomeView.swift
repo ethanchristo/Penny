@@ -18,7 +18,6 @@ struct HomeView: View {
     @AppStorage("net_total_credit_mode", store: .group) private var creditMode: CreditCardBalanceType = .balance
     @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
     @AppStorage("currency_symbol", store: .group) private var currencySymbol: String = "$"
-    @AppStorage("user_yellow_threshhold", store: .group) private var yellowThreshold: Double = 100.0
 
     @Environment(\.scenePhase) var scenePhase
     @Environment(\.modelContext) var modelContext
@@ -29,8 +28,8 @@ struct HomeView: View {
     @Query private var accounts: [Account]
     @Query private var categories: [Category]
     @Query private var budgets: [Budget]
+    @Query private var housings: [Housing]
 
-    @State private var stats = HomeStats()
     /// The windowed + sorted transactions shown in the list, cached so the window
     /// filter and sort only run when their inputs change — not on every body pass.
     @State private var windowedTransactions: [Transaction] = []
@@ -45,21 +44,13 @@ struct HomeView: View {
     
     @State private var settingsSheet = false
     @State private var showAddTransaction = false
+    
+    let stats: HomeStats
+    let horizontalSizeClass: UserInterfaceSizeClass
+    let backgroundColor: Color
 
     private enum CustomSortOrder {
         case dateReverse, dateForward, aToZ, zToA
-    }
-
-    private var backgroundColor: Color {
-        if stats.netTotal > yellowThreshold {
-            Color(.systemGreen)
-        } else if stats.netTotal <= 0 {
-            Color(.systemRed)
-        } else if stats.netTotal > 0 && stats.netTotal <= yellowThreshold {
-            Color(.systemYellow)
-        } else {
-            Color(.systemRed)
-        }
     }
 
     private func computeWindowedTransactions() -> [Transaction] {
@@ -126,38 +117,33 @@ struct HomeView: View {
                 )
                 .padding(.top, 16)
                 .padding(.horizontal, 24)
-
-                SquigglyLine(wavelength: 16, amplitude: 2)
-                    .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .frame(height: 12) // Height should accommodate the amplitude
-                    .padding(.horizontal)
-                    .padding(.top, 16)
                 
-                TransactionFilteredView(
-                    editingTransaction: $editingTransaction,
-                    transactions: windowedTransactions,
-                    namespace: namespace,
-                    hideRecent: false,
-                    hideRecurrence: true,
-                    hideUpcoming: true,
-                    hideAllTx: true,
-                    searchString: searchText,
-                    filterAccount: filterAccount,
-                    filterCategory: filterCategory,
-                    filterIsIncome: filterIsIncome
-                )
+                if horizontalSizeClass == .compact {
+                    SquigglyLine(wavelength: 16, amplitude: 2)
+                        .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .frame(height: 12) // Height should accommodate the amplitude
+                        .padding(.horizontal)
+                        .padding(.top, 16)
+                    
+                    TransactionFilteredView(
+                        editingTransaction: $editingTransaction,
+                        transactions: windowedTransactions,
+                        namespace: namespace,
+                        hideRecent: false,
+                        hideRecurrence: true,
+                        hideUpcoming: true,
+                        hideAllTx: true,
+                        searchString: searchText,
+                        filterAccount: filterAccount,
+                        filterCategory: filterCategory,
+                        filterIsIncome: filterIsIncome
+                    )
+                }
             }
-            .background {
-                LinearGradient(
-                    colors: [backgroundColor.opacity(0.7), .clear, .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity) // DIAGNOSTIC
             .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
             .navigationTitle("Overview")
-            .toolbarTitleDisplayMode(.inlineLarge)
+            .toolbarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .phone ? .inlineLarge : .large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -170,14 +156,24 @@ struct HomeView: View {
 
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showAddTransaction = true
-                    } label: {
-                        Label("Add Transaction", systemImage: "plus")
+                if horizontalSizeClass == .compact {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showAddTransaction = true
+                        } label: {
+                            Label("Add Transaction", systemImage: "plus")
+                        }
+                        .matchedTransitionSource(id: "addTransaction", in: namespace)
                     }
-                    .matchedTransitionSource(id: "addTransaction", in: namespace)
                 }
+            }
+            .background {
+                LinearGradient(
+                    colors: [backgroundColor.opacity(0.7), .clear, .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
             }
         }
         .task(id: statsTaskID) {
@@ -247,6 +243,7 @@ struct HomeView: View {
         }
         hasher.combine(transactionsFingerprint(transactions))
         hasher.combine(budgetsFingerprint(budgets))
+        hasher.combine(housingsFingerprint(housings))
         return hasher.finalize()
     }
 

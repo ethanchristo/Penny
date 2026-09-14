@@ -59,6 +59,13 @@ struct SettingsView: View {
                 .foregroundStyle(.primary)
                 .tint(.secondary)
                 
+                NavigationLink {
+                    HousingView()
+                } label: {
+                    Label("Housing", systemImage: "house")
+                }
+                .foregroundStyle(.primary)
+                
                 Picker(selection: $currentTheme) {
                     ForEach(AppTheme.allCases) { theme in
                         Text(theme.rawValue).tag(theme)
@@ -236,22 +243,6 @@ struct SettingsView: View {
     private var netTotalSettings: some View {
         Form {
             Section {
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text(currencySymbol)
-                        .foregroundStyle(Color.secondary)
-                        .font(.title)
-                    
-                    TextField("Enter a threshold", value: $yellowThreshold, format: .number)
-                        .keyboardType(.decimalPad)
-                        .font(.largeTitle)
-                }
-            } header: {
-                Text("Yellow Threshold")
-            } footer: {
-                Text("Changing this number will affect when the home tab's background is set to yellow.")
-            }
-            
-            Section {
                 Toggle("Include Upcoming Recurring", isOn: $includeUpcoming)
 
                 Toggle("Include Savings", isOn: $savingsTotal)
@@ -274,6 +265,22 @@ struct SettingsView: View {
                 .tint(.secondary)
             } footer: {
                 Text("Total Balance subtracts each card's full outstanding balance; Amount Due subtracts only the last closed statement's balance. When SimpleFIN is connected, its reported balance is used, falling back to your transactions.")
+            }
+            
+            Section {
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text(currencySymbol)
+                        .foregroundStyle(Color.secondary)
+                        .font(.title)
+                    
+                    TextField("Enter a threshold", value: $yellowThreshold, format: .number)
+                        .keyboardType(.decimalPad)
+                        .font(.largeTitle)
+                }
+            } header: {
+                Text("Yellow Threshold")
+            } footer: {
+                Text("Changing this number will affect when the home tab's background is set to yellow.")
             }
         }
         .navigationTitle("Net Total")
