@@ -358,6 +358,61 @@ enum SimpleFINConfig {
 
     static var isConfigured: Bool { connectedDate != nil }
 
+    /// Rebuilds this bookkeeping for a connection that was set up on another
+    /// device. The Access URL lives in a *synchronizable* Keychain item, so it
+    /// follows the user via iCloud Keychain — but this config lives in App Group
+    /// `UserDefaults`, which doesn't sync at all. A new device (or a reinstall)
+    /// therefore ends up holding a working credential while `isConfigured` is
+    /// false, which used to drop the user into the first-connection wizard.
+    ///
+    /// Everything needed is already in the CloudKit-synced store: each mapped
+    /// account's seeded "Opening balance" transaction carries
+    /// `simplefin-opening-balance-<account id>` as its externalID, and the one
+    /// with no `account` is the primary checking. Cutoffs resume from the newest
+    /// imported transaction per account, falling back to the seeded balance's
+    /// date — deliberately conservative, since re-fetching an already-saved
+    /// transaction is deduped by externalID while too late a cutoff would drop it.
+    ///
+    /// Returns true when a prior connection was found and adopted.
+    @MainActor
+    @discardableResult
+    static func adoptSyncedConnection(in context: ModelContext) -> Bool {
+        guard !isConfigured else { return true }
+
+        let prefix = SimpleFINImporter.openingBalancePrefix
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        let seeds = transactions.filter { $0.externalID?.hasPrefix(prefix) == true }
+        guard !seeds.isEmpty else { return false }
+
+        // Newest imported transaction per mapped account. Manual entries have no
+        // externalID, so they can't drag a cutoff past the real sync frontier.
+        // The primary checking has no `Account` to key on and so isn't covered
+        // here — it falls back to its seeded balance date below.
+        var newestImported: [String: Date] = [:]
+        for txn in transactions where txn.externalID != nil {
+            guard let accountID = txn.account?.externalID else { continue }
+            newestImported[accountID] = max(newestImported[accountID] ?? .distantPast, txn.date)
+        }
+
+        var cutoffs: [String: Date] = [:]
+        var recoveredCheckingID: String?
+        for seed in seeds {
+            guard let externalID = seed.externalID else { continue }
+            let accountID = String(externalID.dropFirst(prefix.count))
+            // The primary checking is the account seeded with no `Account`.
+            if seed.account == nil { recoveredCheckingID = accountID }
+            cutoffs[accountID] = max(seed.date, newestImported[accountID] ?? .distantPast)
+        }
+        guard !cutoffs.isEmpty else { return false }
+
+        accountCutoffs = cutoffs
+        checkingID = recoveredCheckingID
+        // The per-account cutoffs do the real gating; this only has to be no
+        // later than the earliest of them, and marks setup as done.
+        connectedDate = cutoffs.values.min()
+        return true
+    }
+
     static func markSkipped(_ id: String) {
         var ids = skippedIDs
         guard !ids.contains(id) else { return }
@@ -387,10 +442,15 @@ enum SimpleFINImporter {
         var skipped = 0    // transactions already saved (matched by externalID)
     }
 
+    /// Prefix shared by every seeded opening-balance externalID. Also how
+    /// `SimpleFINConfig.adoptSyncedConnection` finds which accounts were mapped
+    /// when only the synced data survives.
+    fileprivate static let openingBalancePrefix = "simplefin-opening-balance-"
+
     /// Stable externalID for an account's seeded opening-balance transaction,
     /// so re-running setup can't create a second one for the same account.
     private static func openingBalanceID(for accountID: String) -> String {
-        "simplefin-opening-balance-\(accountID)"
+        openingBalancePrefix + accountID
     }
 
     /// The import cutoff to record for an account at setup time: the most recent

@@ -10,6 +10,7 @@
 		E62B49C32F730E6200779DB5 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6A3119B2F730BC400F16CD9 /* WidgetKit.framework */; };
 		E62B49C42F730E6200779DB5 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6A3119D2F730BC400F16CD9 /* SwiftUI.framework */; };
 		E62B49CF2F730E6300779DB5 /* NetTotalWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E699DB463058F7A5000651CE /* BudgetSummaryConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = E699DB453058F7A5000651CE /* BudgetSummaryConfig.swift */; };
 		E6D293DE301007F800728795 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = E6D293DD301007F800728795 /* OrderedCollections */; };
 		E6D293E2301008B400728795 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = E6D293E1301008B400728795 /* OrderedCollections */; };
 /* End PBXBuildFile section */
@@ -63,6 +64,7 @@
 		E617A04830294679004DBDEC /* PennyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PennyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NetTotalWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E67E441D2F04B2C600FB038D /* Penny.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Penny.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E699DB453058F7A5000651CE /* BudgetSummaryConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetSummaryConfig.swift; sourceTree = "<group>"; };
 		E6A3119B2F730BC400F16CD9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		E6A3119D2F730BC400F16CD9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -89,6 +91,7 @@
 				Classes/Category.swift,
 				Classes/Database.swift,
 				Classes/Housing.swift,
+				Classes/Summary.swift,
 				Classes/Transaction.swift,
 				Helpers/AppRouter.swift,
 				Helpers/ColorHex.swift,
@@ -167,6 +170,7 @@
 				E62B49C52F730E6200779DB5 /* NetTotalWidget */,
 				E617A04930294679004DBDEC /* PennyTests */,
 				E6A3119A2F730BC400F16CD9 /* Frameworks */,
+				E699DB453058F7A5000651CE /* BudgetSummaryConfig.swift */,
 				E67E441E2F04B2C600FB038D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -335,6 +339,7 @@
 		E62B49BE2F730E6200779DB5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				E699DB463058F7A5000651CE /* BudgetSummaryConfig.swift in Sources */,
 			);
 		};
 		E67E44192F04B2C600FB038D /* Sources */ = {
@@ -601,6 +606,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -625,7 +632,9 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -647,6 +656,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -671,7 +682,9 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;

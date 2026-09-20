@@ -40,7 +40,10 @@ nonisolated extension Date {
     }
     
     var endOfWeek: Date {
-        Calendar.current.date(byAdding: .second, value: 604799, to: startOfWeek) ?? self
+        // Robust Pattern: Start of Week + 7 Days - 1 Second
+        let calendar = Calendar.current
+        guard let startOfNextWeek = calendar.date(byAdding: .day, value: 7, to: startOfWeek) else { return self }
+        return calendar.date(byAdding: .second, value: -1, to: startOfNextWeek) ?? self
     }
     
     var startOfFortnight: Date {

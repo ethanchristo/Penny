@@ -210,3 +210,4 @@ enum CategoryRole: String, Codable, CaseIterable {
     case housing
     case miscellaneous
 }
+

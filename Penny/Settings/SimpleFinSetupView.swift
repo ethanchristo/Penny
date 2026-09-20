@@ -33,6 +33,11 @@ struct SimpleFinSetupView: View {
     @State private var newAccounts: [SimpleFINAccount] = []
     @State private var isMappingNewAccounts = false
 
+    // Whether this session claimed the Access URL itself, as opposed to finding
+    // one already in the Keychain. Backing out of setup may only delete a
+    // credential we just created — see `cancelMapping()`.
+    @State private var claimedThisSession = false
+
     // Mirrors SimpleFINConfig.skipRecurringDuplicates. Stored in the shared App
     // Group suite and defaults to true so the importer skips duplicates by default.
     @AppStorage("simplefin_skip_recurring_duplicates", store: .group)
@@ -186,6 +191,16 @@ struct SimpleFinSetupView: View {
 
     private func restoreExistingConnection() async {
         guard SimpleFINStore.loadAccessURL() != nil else { return }
+
+        // A credential with no local bookkeeping means iCloud Keychain carried
+        // the Access URL over from another device (or a reinstall) without the
+        // App Group defaults, which don't sync. Rebuild them from the synced
+        // data rather than re-running the first-connection wizard, which would
+        // reset the import cutoffs and re-run the mapping the user already did.
+        if !SimpleFINConfig.isConfigured {
+            SimpleFINConfig.adoptSyncedConnection(in: modelContext)
+        }
+
         if SimpleFINConfig.isConfigured {
             await sync()
         } else {
@@ -200,6 +215,7 @@ struct SimpleFinSetupView: View {
         do {
             let accessURL = try await SimpleFINClient.claim(setupToken: setupToken)
             SimpleFINStore.saveAccessURL(accessURL)
+            claimedThisSession = true
             setupToken = ""   // one-time use; nothing to keep
             await loadAccountsForMapping()
         } catch {
@@ -287,15 +303,21 @@ struct SimpleFinSetupView: View {
         phase = .connected
     }
 
-    /// Mapping wizard cancelled. For the first connection there's nothing to keep,
-    /// so disconnect; for newly-found accounts just return — the banner stays so
-    /// they can be set up later.
+    /// Mapping wizard cancelled. For newly-found accounts just return — the
+    /// banner stays so they can be set up later. For the first connection there's
+    /// nothing to keep *if the token was claimed in this session*, so disconnect.
+    /// If the Access URL was already there, it came from iCloud Keychain and is
+    /// live on another device: the Keychain item is synchronizable, so deleting
+    /// it here would propagate and disconnect that device too. Back out instead
+    /// and leave the credential alone.
     private func cancelMapping() {
         if isMappingNewAccounts {
             isMappingNewAccounts = false
             phase = .connected
-        } else {
+        } else if claimedThisSession {
             disconnect()
+        } else {
+            phase = .disconnected
         }
     }
 
@@ -304,6 +326,7 @@ struct SimpleFinSetupView: View {
         // connection itself is removed.
         SimpleFINStore.deleteAccessURL()
         SimpleFINConfig.reset()
+        claimedThisSession = false
         lastAccounts = []
         bridgeErrors = []
         errorMessage = nil

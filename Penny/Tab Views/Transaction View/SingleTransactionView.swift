@@ -66,6 +66,8 @@ struct SingleTransactionView: View {
     @State private var editMode: Bool = false
     @State private var draft = Draft()
     @State private var showDeleteConfirmation = false
+    @State private var pendingCategoryRule: (notes: String, category: Category)? = nil
+    @State private var showCategoryRuleAlert = false
 
     let initialEditMode: Bool
     let transaction: Transaction?
@@ -147,7 +149,11 @@ struct SingleTransactionView: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done", systemImage: "checkmark") {
                             saveTransaction()
-                            dismiss()
+                            if pendingCategoryRule != nil {
+                                showCategoryRuleAlert = true
+                            } else {
+                                dismiss()
+                            }
                         }
                         .disabled(draft.amount == 0.0 || (draft.category == nil && draft.budget == nil))
                     }
@@ -174,6 +180,23 @@ struct SingleTransactionView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("This can't be undone.")
+        }
+        .alert("Save Category Rule?", isPresented: $showCategoryRuleAlert) {
+            Button("Save Rule") {
+                if let pending = pendingCategoryRule {
+                    learnCategoryRule(notes: pending.notes, newCategory: pending.category)
+                }
+                pendingCategoryRule = nil
+                dismiss()
+            }
+            Button("Don't Save", role: .cancel) {
+                pendingCategoryRule = nil
+                dismiss()
+            }
+        } message: {
+            if let pending = pendingCategoryRule {
+                Text("Automatically categorize future imported transactions from \"\(pending.notes)\" as \(pending.category.name)?")
+            }
         }
     }
 
@@ -212,14 +235,12 @@ struct SingleTransactionView: View {
             existingTx.recurrence = draft.recurrence
             existingTx.endDate = draft.endDate
 
-            // If the user manually re-categorized an imported transaction, remember
-            // the choice as a rule so future imports of the same merchant match it.
-            if wasImported, draft.budget == nil {
-                learnCategoryRule(
-                    notes: draft.notes,
-                    newCategory: finalCategory,
-                    previousCategory: previousCategory
-                )
+            // If the user manually re-categorized an imported transaction, ask
+            // whether to remember the choice as a rule so future imports of the
+            // same merchant match it.
+            if wasImported, draft.budget == nil,
+               shouldOfferCategoryRule(notes: draft.notes, newCategory: finalCategory, previousCategory: previousCategory) {
+                pendingCategoryRule = (notes: draft.notes, category: finalCategory)
             }
         } else {
             // Create brand new
@@ -245,16 +266,25 @@ struct SingleTransactionView: View {
         syncPayrollPayPeriodAnchor()
     }
 
+    /// Whether re-categorizing an imported transaction is worth prompting the user to
+    /// save as a category rule. False when there's nothing to match on, the category
+    /// didn't actually change, or a matching rule already exists on the target category.
+    private func shouldOfferCategoryRule(notes: String, newCategory: Category, previousCategory: Category?) -> Bool {
+        let keyword = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !keyword.isEmpty, previousCategory?.id != newCategory.id else { return false }
+
+        let alreadyExists = (newCategory.rules ?? []).contains { rule in
+            (rule.inputNotes ?? "").caseInsensitiveCompare(keyword) == .orderedSame
+        }
+        return !alreadyExists
+    }
+
     /// Creates a category rule keyed on an imported transaction's notes/merchant so
     /// that future SimpleFIN / FinanceKit imports of the same merchant are assigned
-    /// the category the user just chose. No-ops when there's nothing to match on or
-    /// when the category didn't actually change.
-    private func learnCategoryRule(notes: String, newCategory: Category, previousCategory: Category?) -> Void {
+    /// the category the user just chose.
+    private func learnCategoryRule(notes: String, newCategory: Category) -> Void {
         let keyword = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Need a merchant/notes string to match against, and the category must have
-        // actually changed — no point recording a rule for an unchanged category.
-        guard !keyword.isEmpty, previousCategory?.id != newCategory.id else { return }
+        guard !keyword.isEmpty else { return }
 
         // Remove any existing rules on OTHER categories that match this exact keyword,
         // so the re-categorization actually takes effect (rule matching returns the
@@ -264,12 +294,6 @@ struct SingleTransactionView: View {
                 (rule.inputNotes ?? "").caseInsensitiveCompare(keyword) == .orderedSame
             }
         }
-
-        // Don't duplicate a rule that already exists on the target category.
-        let alreadyExists = (newCategory.rules ?? []).contains { rule in
-            (rule.inputNotes ?? "").caseInsensitiveCompare(keyword) == .orderedSame
-        }
-        guard !alreadyExists else { return }
 
         let rule = CategoryRules(inputNotes: keyword)
         rule.category = newCategory

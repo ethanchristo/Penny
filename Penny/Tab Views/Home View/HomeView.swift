@@ -21,7 +21,8 @@ struct HomeView: View {
 
     @Environment(\.scenePhase) var scenePhase
     @Environment(\.modelContext) var modelContext
-    
+    @Environment(OverallBudget.self) private var overallBudget
+
     @Namespace private var namespace
 
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
@@ -33,6 +34,9 @@ struct HomeView: View {
     /// The windowed + sorted transactions shown in the list, cached so the window
     /// filter and sort only run when their inputs change — not on every body pass.
     @State private var windowedTransactions: [Transaction] = []
+    /// The summary card's sections, cached for the same reason (see `Summary`) and
+    /// refreshed from `summaryTaskID` below.
+    @State private var summary = Summary()
     @State private var editingTransaction: Transaction?
 
     @State private var searchText = ""
@@ -110,8 +114,7 @@ struct HomeView: View {
                 .padding(.horizontal, 24)
 
                 BudgetSummaryView(
-                    categories: categories,
-                    budgets: budgets,
+                    summary: summary,
                     transactions: transactions,
                     selectedTimeRange: selectedTimeRange
                 )
@@ -196,6 +199,17 @@ struct HomeView: View {
         // changes the range or sort — no need to touch the all-time stats for these.
         .onChange(of: selectedTimeRange) { windowedTransactions = computeWindowedTransactions() }
         .onChange(of: sortOrder) { windowedTransactions = computeWindowedTransactions() }
+        // Rebuild the summary card's sections only when their inputs change. Kept
+        // separate from `statsTaskID` because the summary IS range-dependent while the
+        // net total isn't, and it's synchronous main-actor work (its rows hold live
+        // models the card navigates to), so `onChange` rather than `task`.
+        .onChange(of: summaryTaskID, initial: true) {
+            summary.refresh(categories: categories,
+                            budgets: budgets,
+                            transactions: transactions,
+                            selectedTimeRange: selectedTimeRange,
+                            overallBudget: overallBudget)
+        }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             if !scriptSecret.isEmpty {
@@ -247,6 +261,21 @@ struct HomeView: View {
         return hasher.finalize()
     }
 
+    /// Dependency key for the summary card's recompute. Unlike the net total the
+    /// summary is windowed, so the selected range is part of it — as is the overall
+    /// budget's window, which decides what counts as spent against it. The overall
+    /// budget's *amount* is deliberately absent: the card reads it live, and changing
+    /// a limit doesn't change what was already spent.
+    private var summaryTaskID: Int {
+        var hasher = Hasher()
+        hasher.combine(selectedTimeRange)
+        hasher.combine(overallBudget.budgetWindow)
+        hasher.combine(transactionsFingerprint(transactions))
+        hasher.combine(budgetsFingerprint(budgets))
+        hasher.combine(categoriesFingerprint(categories))
+        return hasher.finalize()
+    }
+
     private func silentAutoFetch() async {
         let cleanUrl = scriptUrl.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanSecret = scriptSecret.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -290,8 +319,14 @@ struct HomeView: View {
     /// the Bridge only refreshes about once a day and heavy polling can disable
     /// the connection. No-ops if SimpleFIN isn't connected.
     private func silentSimpleFINSync() async {
-        guard SimpleFINConfig.isConfigured,
-              let accessURL = SimpleFINStore.loadAccessURL() else { return }
+        guard let accessURL = SimpleFINStore.loadAccessURL() else { return }
+
+        // A credential without local bookkeeping means iCloud Keychain brought
+        // the connection over from another device; rebuild it from the synced
+        // data so syncing resumes without a trip through Settings.
+        guard SimpleFINConfig.isConfigured
+                || SimpleFINConfig.adoptSyncedConnection(in: modelContext)
+        else { return }
 
         let throttle: TimeInterval = 6 * 60 * 60
         if let last = SimpleFINConfig.lastSyncDate,
@@ -394,231 +429,420 @@ struct HomeView: View {
     }
 }
 
-/// A compact glass card under the net total summarizing budget health: a highlighted
-/// overall-budget section (only when the overall budget is enabled), the budgets the
-/// user has overspent, and the recurring budgets still under their limit — plus a
-/// friendly nudge for whatever spendable money is left over.
+/// A compact glass card under the net total summarizing where the money is going: a
+/// highlighted overall-budget section (only when the overall budget is enabled), the
+/// budgets the user has overspent, the expenses coming due next, the biggest spending
+/// categories, and the recurring budgets still under their limit.
+///
+/// Presentation only — the sections come pre-computed in `Summary`, which HomeView
+/// owns and refreshes when the underlying data changes. Every row is a control rather
+/// than a label: budgets open their insights page, upcoming expenses open the
+/// transaction, and categories open their spending detail.
 struct BudgetSummaryView: View {
     @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
 
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(OverallBudget.self) private var overallBudget
 
-    let categories: [Category]
-    let budgets: [Budget]
+    @Namespace private var namespace
+
+    @State private var navRoute: SummaryRoute?
+    /// Same destinations as `navRoute`, but presented full-screen — used in the
+    /// regular-width side-by-side layout (see `open`).
+    @State private var coverRoute: SummaryRoute?
+    @State private var editingTransaction: Transaction?
+
+    @State private var haptics: Int = 0
+
+    /// The already-computed sections. Owned and refreshed by `HomeView`; this view
+    /// only renders them (see `Summary` for why they aren't computed here).
+    let summary: Summary
+    /// The full transaction set, used to scope the destinations a row opens.
     let transactions: [Transaction]
-    /// The home tab's selected range — used to grant ended one-time budgets a grace
-    /// window before they drop off the overspent list (see `overspentBudgets`).
+    /// The home tab's selected range — the window `summary` was built for, shown as
+    /// the subtitle on a category's spending detail.
     let selectedTimeRange: HomeTimeRange
 
-    /// One budget row: a signed magnitude (always positive here) with its name/symbol.
-    private struct BudgetStat: Identifiable {
-        let id: String
-        let symbol: String
-        let name: String
-        let amount: Double
-    }
+    /// Everywhere a summary row can go. `Identifiable` as well as `Hashable` so the
+    /// same value can drive both the pushed destination and the full-screen cover.
+    private enum SummaryRoute: Hashable, Identifiable {
+        case overall
+        case budget(SummaryTarget)
+        case categorySpending(Category)
+        case allBudgets
+        case allCategories
+        case allTransactions
 
-    // MARK: - Overspent / underspent lists
-
-    /// Budgets currently spent past their limit, biggest overage first. A pre-funded
-    /// one-time budget is dropped once today is past the end of the selected-range
-    /// window that follows its end date, so a closed envelope stops nagging while its
-    /// late-posting transactions still have time to land.
-    private var overspentBudgets: [BudgetStat] {
-        var results: [BudgetStat] = []
-
-        // Category budgets — windowed spend vs. the category's limit.
-        for category in categories {
-            guard let budget = category.budget, budget.hasBudget, !budget.isFreestanding else { continue }
-            let limit = budget.amount
-            guard limit > 0 else { continue }
-            let spent = budgetTotal(for: category, in: transactions, by: 0)
-            if spent > limit {
-                results.append(.init(id: "cat-\(category.id)",
-                                     symbol: category.symbol,
-                                     name: category.name,
-                                     amount: spent - limit))
-            }
-        }
-
-        // Freestanding budgets track their own remaining balance.
-        for budget in budgets where budget.hasBudget && budget.isFreestanding {
-            guard budget.remaining < 0 else { continue }
-            // Skip pre-funded one-time budgets whose grace window has passed.
-            if budget.preFunding, !budget.isRecurring, let end = budget.end,
-               Date.now > windowEnd(after: end) {
-                continue
-            }
-            results.append(.init(id: "budget-\(budget.id)",
-                                 symbol: budget.displaySymbol,
-                                 name: budget.displayName,
-                                 amount: -budget.remaining))
-        }
-
-        return results.sorted { $0.amount > $1.amount }
-    }
-
-    /// Recurring budgets still under their limit, most room first. One-time budgets are
-    /// intentionally skipped — an ended envelope isn't "underspent", it's just done.
-    private var underspentBudgets: [BudgetStat] {
-        var results: [BudgetStat] = []
-
-        // Category budgets are always recurring.
-        for category in categories {
-            guard let budget = category.budget, budget.hasBudget, !budget.isFreestanding else { continue }
-            let limit = budget.amount
-            guard limit > 0 else { continue }
-            let spent = budgetTotal(for: category, in: transactions, by: 0)
-            if spent < limit {
-                results.append(.init(id: "cat-\(category.id)",
-                                     symbol: category.symbol,
-                                     name: category.name,
-                                     amount: limit - spent))
-            }
-        }
-
-        // Recurring freestanding budgets only.
-        for budget in budgets where budget.hasBudget && budget.isFreestanding && budget.isRecurring {
-            if budget.remaining > 0 {
-                results.append(.init(id: "budget-\(budget.id)",
-                                     symbol: budget.displaySymbol,
-                                     name: budget.displayName,
-                                     amount: budget.remaining))
-            }
-        }
-
-        return results.sorted { $0.amount > $1.amount }
-    }
-
-    private var totalOverspent: Double {
-        overspentBudgets.reduce(0) { $0 + $1.amount }
-    }
-
-    /// The end of the selected-range window that `date` falls in — the first window
-    /// boundary on or after it. `allTime` has no boundary, so nothing ever ages out.
-    private func windowEnd(after date: Date) -> Date {
-        switch selectedTimeRange {
-        case .daily:     return date.endOfDay
-        case .weekly:    return date.endOfWeek
-        case .monthly:   return date.endOfMonth
-        case .yearly:    return date.endOfYear
-        case .payPeriod: return payPeriodBounds(containing: date, offset: 0).end
-        case .allTime:   return .distantFuture
-        }
+        var id: Self { self }
     }
 
     // MARK: - Overall budget
 
     private var overallLimit: Double { overallBudget.budget }
-    private var overallSpent: Double { overallBudgetTotal(for: overallBudget, in: transactions, by: 0) }
-    private var overallRemaining: Double { overallLimit - overallSpent }
+    private var overallRemaining: Double { overallLimit - summary.overallSpent }
 
-    /// Mixes a semantic color toward the foreground so it stays legible on glass.
-    private func toned(_ base: Color) -> Color {
-        colorScheme == .dark ? base.mix(with: .white, by: 0.4) : base.mix(with: .black, by: 0.3)
+    // MARK: - Navigation
+
+    /// Routes to `route` — pushed within HomeView's own stack when compact (it already
+    /// fills the screen), or presented full-screen when regular-width (side-by-side
+    /// layout), so it covers both panes instead of just the left one. Matches how the
+    /// net-total buttons above this card navigate.
+    private func open(_ route: SummaryRoute) {
+        haptics += 1
+        if horizontalSizeClass == .regular {
+            coverRoute = route
+        } else {
+            navRoute = route
+        }
+    }
+
+    @ViewBuilder
+    private func destination(for route: SummaryRoute) -> some View {
+        switch route {
+        case .overall:
+            BudgetInsightsView(namespace: namespace,
+                               source: .overall(overallBudget, filter: transactions))
+        case .budget(.categoryBudget(let category)):
+            BudgetInsightsView(namespace: namespace,
+                               source: .category(category, filter: categoriedTransactions(for: transactions, with: category)))
+        case .budget(.freestandingBudget(let budget)):
+            FreestandingBudgetInsightsView(budget: budget, namespace: namespace)
+        case .categorySpending(let category):
+            CategorySpendingView(category: category,
+                                 transactions: categoriedTransactions(for: transactions, with: category),
+                                 selectedTimeRange: selectedTimeRange)
+        case .allBudgets:
+            BudgetView()
+        case .allCategories:
+            CategoryInsightsView()
+        case .allTransactions:
+            TransactionView()
+        }
     }
 
     var body: some View {
-        // Compute the overspent/underspent lists once per render. Each is O(categories ×
-        // transactions); body previously read them through `hasContent`, the `.isEmpty`
-        // checks, and `budgetList`, re-running the full scan several times per pass.
-        let overspent = overspentBudgets
-        let underspent = underspentBudgets
-        let showContent = overallBudget.isEnabled || !overspent.isEmpty || !underspent.isEmpty
+        let overspent = summary.overspent
+        let underspent = summary.underspent
+        let upcoming = summary.upcoming
+        let topCategories = summary.topSpending
+
+        let showOverall = overallBudget.isEnabled
+        let showContent = showOverall || !summary.isEmpty
 
         if showContent {
             VStack(alignment: .leading, spacing: 16) {
-                Label("Summary", systemImage: "sparkles")
+                Label("Summary", systemImage: "text.line.3.summary")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                if overallBudget.isEnabled {
+                if showOverall {
                     overallSection
                 }
 
                 if !overspent.isEmpty {
-                    if overallBudget.isEnabled { Divider().opacity(0.4) }
-                    budgetList(title: "Overspent", items: overspent, tint: .red, over: true)
+                    divider(showOverall)
+                    budgetList(title: "Overspent", items: overspent, over: true)
+                }
+
+                if !upcoming.isEmpty {
+                    divider(showOverall || !overspent.isEmpty)
+                    upcomingSection(upcoming)
+                }
+
+                if !topCategories.isEmpty {
+                    divider(showOverall || !overspent.isEmpty || !upcoming.isEmpty)
+                    topSpendingSection(topCategories)
                 }
 
                 if !underspent.isEmpty {
-                    if overallBudget.isEnabled || !overspent.isEmpty { Divider().opacity(0.4) }
-                    budgetList(title: "Underspent", items: underspent, tint: .green, over: false)
+                    divider(showOverall || !overspent.isEmpty || !upcoming.isEmpty || !topCategories.isEmpty)
+                    budgetList(title: "Underspent", items: underspent, over: false, showsSpending: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 36))
+            .sensoryFeedback(.impact(weight: .light), trigger: haptics)
+            .navigationDestination(item: $navRoute) { route in
+                destination(for: route)
+            }
+            .fullScreenCover(item: $coverRoute) { route in
+                NavigationStack {
+                    destination(for: route)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button {
+                                    coverRoute = nil
+                                } label: {
+                                    Label("Close", systemImage: "xmark")
+                                }
+                            }
+                        }
+                }
+            }
+            .sheet(item: $editingTransaction) { transaction in
+                NavigationStack {
+                    SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, budget: nil)
+                }
+                .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
+            }
         }
     }
 
-    /// The highlighted overall-budget block: remaining amount, a progress bar, and the
-    /// spent-of-limit line, tinted by whether the budget is still in the black.
-    private var overallSection: some View {
-        let color: Color = overallRemaining < 0 ? Color(.systemRed) : Color(.systemGreen)
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("Overall Budget", systemImage: "chart.pie.fill")
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                Text(budgetWindowText(from: overallBudget.budgetWindow))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack(alignment: .lastTextBaseline, spacing: 6) {
-                Text(overallRemaining, format: .currency(code: currencyCode))
-                    .font(.title2.bold())
-                    .monospacedDigit()
-                    .foregroundStyle(toned(color))
-                    .contentTransition(.numericText())
-                Text(overallRemaining < 0 ? "over" : "left")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            ProgressView(value: min(max(overallSpent, 0), overallLimit), total: max(overallLimit, 0.01))
-                .tint(toned(color))
-
-            Text("\(overallSpent.formatted(.currency(code: currencyCode))) spent of \(overallLimit.formatted(.currency(code: currencyCode)))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 24))
-    }
-
-    /// A titled list of budget rows with a subtotal. `over` shows amounts as negative
-    /// (overspend); otherwise they're the positive remaining.
+    /// The separator between two sections, drawn only when something came before.
     @ViewBuilder
-    private func budgetList(title: String, items: [BudgetStat], tint: Color, over: Bool) -> some View {
+    private func divider(_ hasPrecedingSection: Bool) -> some View {
+        if hasPrecedingSection { Divider().opacity(0.4) }
+    }
+
+    /// The overall-budget block, shaped like an underspent row — glyph, name, and a
+    /// spent-of-limit caption, with what's left on the right — but sized up and sat on
+    /// a tinted background, since it's the card's headline figure. Opens the overall
+    /// budget's insights page.
+    private var overallSection: some View {
+        return Button {
+            open(.overall)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "chart.pie")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Overall Budget")
+                        .font(.headline)
+                    Text("\(summary.overallSpent.formatted(.currency(code: currencyCode))) spent of \(overallLimit.formatted(.currency(code: currencyCode))) \(budgetWindowText(from: overallBudget.budgetWindow))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 1) {
+                    // Always a magnitude — the label below says which side of the
+                    // budget it falls on.
+                    Text(abs(overallRemaining), format: .currency(code: currencyCode))
+                        .font(.title3.bold())
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                    Text(overallRemaining < 0 ? "over" : "under")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .underline()
+                }
+            }
+//            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+//            .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 24))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .matchedTransitionSource(id: "overallInsights", in: namespace)
+    }
+
+    /// A titled list of budget rows with a subtotal, each row opening that budget.
+    /// `over` shows amounts as negative (overspend); otherwise they're the positive
+    /// remaining. `showsSpending` adds the spent-of-limit line under each name, the
+    /// way the upcoming rows carry their due date.
+    @ViewBuilder
+    private func budgetList(title: String, items: [SummaryBudgetStat], over: Bool, showsSpending: Bool = false) -> some View {
         let subtotal = items.reduce(0) { $0 + $1.amount }
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
+            sectionHeader(title, subtotal: subtotal, route: .allBudgets)
+
+            ForEach(items) { item in
+                Button {
+                    open(.budget(item.target))
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(item.symbol)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(item.name)
+                                .lineLimit(1)
+                            if showsSpending {
+                                Text("\(item.spent.formatted(.currency(code: currencyCode))) spent of \(item.limit.formatted(.currency(code: currencyCode)))")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Text(over ? -item.amount : item.amount, format: .currency(code: currencyCode))
+                            .monospacedDigit()
+                    }
+                    .font(.subheadline)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .matchedTransitionSource(id: item.target.transitionID, in: namespace)
+            }
+        }
+    }
+
+    /// What's due next, each row opening that transaction. Recurring transactions show
+    /// the date of their next occurrence; one-time ones their own (future) date.
+    @ViewBuilder
+    private func upcomingSection(_ items: [SummaryUpcomingExpense]) -> some View {
+        let subtotal = items.reduce(0) { $0 + $1.amount }
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Upcoming", subtotal: subtotal, route: .allTransactions)
+
+            ForEach(items) { item in
+                Button {
+                    editingTransaction = item.transaction
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(item.symbol)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(item.name)
+                                .lineLimit(1)
+                            Text(item.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(item.amount, format: .currency(code: currencyCode))
+                            .monospacedDigit()
+                    }
+                    .font(.subheadline)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .matchedTransitionSource(id: item.id, in: namespace)
+            }
+        }
+    }
+
+    /// Where the money actually went this window: the biggest spending categories that
+    /// aren't already flagged as overspent, each opening its own spending detail.
+    @ViewBuilder
+    private func topSpendingSection(_ slices: [CategorySlice]) -> some View {
+        let subtotal = slices.reduce(0) { $0 + $1.amount }
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Top Spending", subtotal: subtotal, route: .allCategories)
+
+            ForEach(slices) { slice in
+                Button {
+                    open(.categorySpending(slice.category))
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(slice.symbol)
+                        Text(slice.name)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(slice.amount, format: .currency(code: currencyCode))
+                            .monospacedDigit()
+                    }
+                    .font(.subheadline)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// A section's title and subtotal, tappable as a whole to reach the full view the
+    /// section is a preview of.
+    private func sectionHeader(_ title: String, subtotal: Double, route: SummaryRoute) -> some View {
+        Button {
+            open(route)
+        } label: {
+            HStack(spacing: 4) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
                 Spacer()
                 Text(subtotal, format: .currency(code: currencyCode))
                     .font(.caption)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
-
-            ForEach(items) { item in
-                HStack(spacing: 8) {
-                    Text(item.symbol)
-                    Text(item.name)
-                        .lineLimit(1)
-                    Spacer()
-                    Text(over ? -item.amount : item.amount, format: .currency(code: currencyCode))
-                        .monospacedDigit()
-                        .foregroundStyle(toned(tint))
-                }
-                .font(.subheadline)
-            }
+            .contentShape(.rect)
         }
+        .buttonStyle(.plain)
     }
 
+}
+
+/// Where a top-spending category goes when tapped: what it cost over the home tab's
+/// window, above the transactions that make up the total. Unlike `BudgetInsightsView`
+/// this doesn't assume the category has a budget — most top spenders don't.
+struct CategorySpendingView: View {
+    @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
+
+    @Namespace private var namespace
+
+    @State private var editingTransaction: Transaction?
+
+    let category: Category
+    /// The category's transactions, unwindowed — the window is applied here so the
+    /// header total and the list below always agree on it.
+    let transactions: [Transaction]
+    let selectedTimeRange: HomeTimeRange
+
+    private var window: (start: Date, end: Date) {
+        windowBounds(for: selectedTimeRange, offset: 0)
+    }
+
+    /// Windowed spend for the category, computed the same way the home card's
+    /// Top Spending row is (`categorySpendData`), so the two never disagree.
+    private var spent: Double {
+        let expenses = typedTransactions(for: transactions, income: false)
+        return abs(calculateTotal(for: expenses, start: window.start, end: window.end))
+    }
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 4) {
+                Text(category.symbol)
+                    .font(.system(size: 44))
+
+                Text(spent, format: .currency(code: currencyCode))
+                    .font(.largeTitle.bold())
+                    .monospacedDigit()
+                    .foregroundStyle(category.color)
+
+                Text("Spent · \(selectedTimeRange.rawValue)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 20)
+
+            SquigglyLine(wavelength: 16, amplitude: 2)
+                .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .frame(height: 12)
+                .padding(.horizontal)
+                .padding(.top, 8)
+
+            TransactionFilteredView(
+                editingTransaction: $editingTransaction,
+                transactions: transactionsInRange(start: window.start, end: window.end, transactions: transactions),
+                namespace: namespace,
+                hideRecent: true,
+                hideRecurrence: false,
+                hideUpcoming: true,
+                hideAllTx: false,
+                searchString: ""
+            )
+        }
+        .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+        .background {
+            LinearGradient(
+                colors: [category.color.opacity(0.2), .clear, .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
+        .navigationTitle("\(category.symbol) \(category.name)")
+        .toolbarTitleDisplayMode(.inline)
+        .sheet(item: $editingTransaction) { transaction in
+            NavigationStack {
+                SingleTransactionView(initialEditMode: false, transaction: transaction, category: nil, budget: nil)
+            }
+            .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
+        }
+    }
 }

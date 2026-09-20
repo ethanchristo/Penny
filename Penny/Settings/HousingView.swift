@@ -19,11 +19,11 @@ struct HousingView: View {
     @State private var newHousing = false
     
     private var mortgages: [Housing] {
-        housing.filter( { !$0.mortgage })
+        housing.filter( { $0.mortgage })
     }
     
     private var apartments: [Housing] {
-        housing.filter( { $0.mortgage })
+        housing.filter( { !$0.mortgage })
     }
 
     var body: some View {

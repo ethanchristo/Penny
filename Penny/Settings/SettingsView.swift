@@ -107,7 +107,7 @@ struct SettingsView: View {
                 .foregroundStyle(.primary)
             }
             
-            Section("Home Tab") {
+            Section("Overview") {
                 NavigationLink {
                     netTotalSettings
                 } label: {
@@ -238,8 +238,6 @@ struct SettingsView: View {
         }
     }
 
-    
-    @ViewBuilder
     private var netTotalSettings: some View {
         Form {
             Section {
@@ -287,7 +285,6 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
     
-    @ViewBuilder
     private var homeTxWindowSettings: some View {
         Form {
             Picker(selection: $selectedTimeRange) {

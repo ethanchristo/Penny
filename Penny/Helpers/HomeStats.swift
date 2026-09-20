@@ -29,9 +29,14 @@ final class HomeStats {
 }
 
 /// Computes a cheap fingerprint of a transactions array to drive `.onChange`/`.task(id:)`.
-/// Catches insert/delete (count) and the most common in-place edits (amount + date +
-/// isIncome + category). Category is folded in so re-categorizing a transaction to
-/// Payroll re-fires the recompute that syncs the payday-anchored pay period.
+/// Catches insert/delete (count) and the in-place edits every dependent recompute reads:
+/// amount, date, isIncome, category, recurrence + endDate, and notes.
+///
+/// Category is folded in so re-categorizing a transaction to Payroll re-fires the
+/// recompute that syncs the payday-anchored pay period. Recurrence and endDate drive
+/// `occurrenceCount`/`nextOccurrence`, so without them changing a transaction from
+/// monthly to weekly (or ending a recurrence) would leave every windowed total — and
+/// Home's Upcoming summary — stale. Notes are the name that summary shows.
 func transactionsFingerprint(_ transactions: [Transaction]) -> Int {
     var hasher = Hasher()
     hasher.combine(transactions.count)
@@ -40,6 +45,24 @@ func transactionsFingerprint(_ transactions: [Transaction]) -> Int {
         hasher.combine(tx.date)
         hasher.combine(tx.isIncome)
         hasher.combine(tx.category?.name)
+        hasher.combine(tx.recurrence)
+        hasher.combine(tx.endDate)
+        hasher.combine(tx.notes)
+    }
+    return hasher.finalize()
+}
+
+/// Fingerprint of the categories that feed Home's summary card, so adding, deleting,
+/// renaming, or restyling a category refreshes it. Budget amounts aren't included —
+/// a category budget is a `Budget`, already covered by `budgetsFingerprint`.
+func categoriesFingerprint(_ categories: [Category]) -> Int {
+    var hasher = Hasher()
+    hasher.combine(categories.count)
+    for category in categories {
+        hasher.combine(category.id)
+        hasher.combine(category.name)
+        hasher.combine(category.symbol)
+        hasher.combine(category.hexColor)
     }
     return hasher.finalize()
 }

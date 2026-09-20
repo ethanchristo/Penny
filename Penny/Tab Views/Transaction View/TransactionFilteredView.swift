@@ -101,21 +101,43 @@ struct TransactionFilteredView: View {
         }
 
         // 2. Split the filtered list into its sections.
+        // Callers that hide Upcoming but still show the main list (every budget/insights
+        // page) pass in a `transactions` array already scoped to their own date window
+        // (e.g. "this week"), which can include one-time transactions dated later this
+        // week/period relative to real time. Those would otherwise only ever match the
+        // Upcoming bucket below and vanish when that section is hidden, even though they're
+        // squarely inside the caller's window and already counted in its totals. Route them
+        // into the main list instead so they stay visible.
+        let routeFutureOneTimeToMainList = hideUpcoming && !hideAllTx
         var sections = DisplaySections()
         sections.recurring = sortedByNextOccurrence(filtered.filter { $0.recurrence != .none && notEnded($0) })
-        sections.upcoming = sortedByNextOccurrence(filtered.filter { ($0.date > now || $0.recurrence != .none) && notEnded($0) })
+        sections.upcoming = sortedByNextOccurrence(filtered.filter {
+            (($0.date > now && !routeFutureOneTimeToMainList) || $0.recurrence != .none) && notEnded($0)
+        })
         sections.funded = filtered.filter { $0.budget != nil }
 
-        // Isolate all past, non-recurring transactions
-        let pastNonRecurring = filtered.filter { $0.recurrence == .none && $0.date <= now }
+        // Isolate all past, non-recurring transactions (plus future ones being routed here).
+        let pastNonRecurring = filtered.filter {
+            $0.recurrence == .none && ($0.date <= now || routeFutureOneTimeToMainList)
+        }
         
-        // Partition them into Recent (last 48 hours) and everything else
-        sections.recent = pastNonRecurring.filter { $0.date >= fortyEightHoursAgo }
-            // Ensure the recent array respects your global ascending/descending toggle
-            .sorted { dateAscending ? $0.date < $1.date : $0.date > $1.date }
-        
-        // Leave the older transactions for the grouped/flat lists
-        sections.notRecurring = pastNonRecurring.filter { $0.date < fortyEightHoursAgo }
+        // Partition them into Recent (last 48 hours) and everything else — but only when
+        // the caller actually renders a Recent section. Callers that hide it (every
+        // windowed detail view: budgets, insights, the plain transaction list) still want
+        // their own last-48-hours transactions in the main list; without this check those
+        // transactions would fall into `recent`, which is never displayed, and silently
+        // disappear even though they're already counted in the caller's totals.
+        if hideRecent {
+            sections.recent = []
+            sections.notRecurring = pastNonRecurring
+        } else {
+            sections.recent = pastNonRecurring.filter { $0.date >= fortyEightHoursAgo }
+                // Ensure the recent array respects your global ascending/descending toggle
+                .sorted { dateAscending ? $0.date < $1.date : $0.date > $1.date }
+
+            // Leave the older transactions for the grouped/flat lists
+            sections.notRecurring = pastNonRecurring.filter { $0.date < fortyEightHoursAgo }
+        }
 
         // 3. Group the older non-recurring transactions by the selected window, sorting
         //    within each group and the groups themselves by the active direction.
@@ -159,14 +181,13 @@ struct TransactionFilteredView: View {
     
     var body: some View {
         let sections = makeSections()
-        // Any section that can actually render. `recent` and `upcoming` must be here:
-        // callers like the Home tab show ONLY the Recent section, so gating on just
-        // recurring/notRecurring would blank the list (no rows AND no empty state)
-        // whenever the window holds only transactions from the last 48 hours.
-        let hasContent = !sections.recurring.isEmpty
-            || !sections.notRecurring.isEmpty
-            || !sections.recent.isEmpty
-            || !sections.upcoming.isEmpty
+        // Any section that can actually render, gated by the same hide flags the body
+        // uses below — a non-empty section that's hidden must not count as content, or
+        // the empty state ("No transactions found") silently fails to show alongside it.
+        let hasContent = (!hideRecurrence && !sections.recurring.isEmpty)
+            || (!hideAllTx && !sections.notRecurring.isEmpty)
+            || (!hideRecent && !sections.recent.isEmpty)
+            || (!hideUpcoming && !sections.upcoming.isEmpty)
 
         Group {
             if !hasContent {
