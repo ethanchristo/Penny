@@ -67,22 +67,24 @@ struct CardsAndAccountsView: View {
     
     var body: some View {
         List {
-            Section {
-                ForEach(creditCards) { card in
-                    Button {
-                        selectedAccount = card
-                    } label: {
-                        HStack {
-                            Text(card.name)
-                            Spacer()
-                            Text(balanceText(for: card))
-                                .foregroundStyle(.secondary)
+            if !creditCards.isEmpty {
+                Section {
+                    ForEach(creditCards) { card in
+                        Button {
+                            selectedAccount = card
+                        } label: {
+                            HStack {
+                                Text(card.name)
+                                Spacer()
+                                Text(balanceText(for: card))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .tint(.primary)
                     }
-                    .tint(.primary)
+                } header: {
+                    Text("Credit Cards")
                 }
-            } header: {
-                Text("Credit Cards")
             }
             
             Section {
@@ -115,22 +117,24 @@ struct CardsAndAccountsView: View {
                 Text("Checking Accounts")
             }
             
-            Section {
-                ForEach(savingsAccounts) { card in
-                    Button {
-                        selectedAccount = card
-                    } label: {
-                        HStack {
-                            Text(card.name)
-                            Spacer()
-                            Text(balanceText(for: card))
-                                .foregroundStyle(.secondary)
+            if !savingsAccounts.isEmpty {
+                Section {
+                    ForEach(savingsAccounts) { card in
+                        Button {
+                            selectedAccount = card
+                        } label: {
+                            HStack {
+                                Text(card.name)
+                                Spacer()
+                                Text(balanceText(for: card))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .tint(.primary)
                     }
-                    .tint(.primary)
+                } header: {
+                    Text("Savings Accounts")
                 }
-            } header: {
-                Text("Savings Accounts")
             }
         }
         .listRowSpacing(12)

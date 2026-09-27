@@ -194,11 +194,21 @@ struct FinanceKitSetupView: View {
     // MARK: - Actions
 
     private func restoreExistingConnection() async {
-        guard FinanceKitConfig.isConfigured else {
-            // Not set up yet — reflect the current authorization state.
+        if !FinanceKitConfig.isConfigured {
             let state = await FinanceKitClient.authorizationState()
-            phase = (state == .denied) ? .denied : .disconnected
-            return
+            // The mapping and its opening balances already came over via
+            // CloudKit, but this bookkeeping lives in App Group defaults, which
+            // don't sync. Rebuild it rather than re-running the wizard, which
+            // would reset every import cutoff to "now" and drop anything that
+            // posted since the last sync elsewhere. Gated on authorization so
+            // the connection is never marked live while Wallet access is denied.
+            guard state == .authorized,
+                  FinanceKitConfig.adoptSyncedConnection(in: modelContext)
+            else {
+                // Not set up yet — reflect the current authorization state.
+                phase = (state == .denied) ? .denied : .disconnected
+                return
+            }
         }
         await sync()
     }

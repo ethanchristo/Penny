@@ -21,7 +21,7 @@
           "image-name" : "Vector 3 2.png",
           "name" : "Vector 3 2",
           "position" : {
-            "scale" : 1,
+            "scale" : 1.2,
             "translation-in-points" : [
               -49,
               -4
@@ -68,7 +68,7 @@
       "layers" : [
         {
           "fill" : {
-            "automatic-gradient" : "display-p3:0.26364,0.18228,0.15073,1.00000"
+            "automatic-gradient" : "display-p3:0.35930,0.24622,0.20675,1.00000"
           },
           "image-name" : "Subtract 2.png",
           "name" : "Subtract 2",

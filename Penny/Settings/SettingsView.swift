@@ -30,14 +30,12 @@ struct SettingsView: View {
     // (e.g. Apple Card Monthly Installments) is subtracted out of its net total
     // contribution, since bank-sync balances lump it in with the rest of the card.
     @AppStorage("include_installment_balance", store: .group) private var includeInstallmentBalance: Bool = false
-    @AppStorage("show_insights") private var showInsights: Bool = true
-    // Controls whether the first-launch onboarding flow is shown. Resetting it
-    // re-presents onboarding on the next app launch.
-    @AppStorage("has_completed_onboarding") private var hasCompletedOnboarding: Bool = false
-
     @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
     
+    // Presents onboarding directly from Settings. The root-level cover in PennyApp
+    // can't present while this sheet is up, so replaying it is handled here.
+    @State private var showOnboarding = false
     @State private var currency: [String] = ["US Dollar", "USD", "$"]
     @State private var yellowNumberSheet = false
     // The payday detected from the latest Payroll transaction, refreshed on appear.
@@ -119,9 +117,6 @@ struct SettingsView: View {
                 } label: {
                     Text("Transaction Window")
                 }
-                
-                Toggle("Show Insights", isOn: $showInsights)
-                    .toggleStyle(SwitchToggleStyle(tint: .accentColor))
             }
 
             Section("Data") {
@@ -189,7 +184,7 @@ struct SettingsView: View {
                 .foregroundStyle(.primary)
 
                 Button("Reset Onboarding", systemImage: "arrow.counterclockwise") {
-                    hasCompletedOnboarding = false
+                    showOnboarding = true
                 }
                 .foregroundStyle(.primary)
             } header: {
@@ -223,6 +218,12 @@ struct SettingsView: View {
         }
         .onChange(of: currency) {
             saveCurrency()
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView()
+                .fontDesign(.rounded)
+                .preferredColorScheme(currentTheme.colorScheme)
+                .interactiveDismissDisabled()
         }
         .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
         .navigationTitle("Settings")

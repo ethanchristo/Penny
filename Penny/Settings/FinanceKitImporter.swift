@@ -146,6 +146,62 @@ enum FinanceKitConfig {
 
     static var isConfigured: Bool { connectedDate != nil }
 
+    /// Rebuilds this bookkeeping from the CloudKit-synced store when it's missing
+    /// but the mapping clearly already happened — a new device, or a reinstall.
+    /// Unlike SimpleFIN there's no credential to lose here (FinanceKit
+    /// authorization is per-device and system-managed), but the failure mode is
+    /// worse in one way: re-running the first-connection wizard re-derives every
+    /// cutoff from `importCutoff`, i.e. the newest transaction visible *now*.
+    /// Anything that posted between the last sync elsewhere and that moment would
+    /// then be silently skipped forever. Adopting instead keeps the frontier.
+    ///
+    /// Recognises a prior setup by the seeded "Opening balance" transactions,
+    /// whose externalID is `financekit-opening-balance-<uuid>`; the namespaced
+    /// account id `FinanceKitAccountSnapshot.id` uses the same uuid, so the two
+    /// can be mapped onto each other. The seed with no `account` is the primary
+    /// checking. If Wallet hands this device different account uuids, nothing
+    /// matches, this returns false, and the caller falls back to the wizard
+    /// exactly as before.
+    @MainActor
+    @discardableResult
+    static func adoptSyncedConnection(in context: ModelContext) -> Bool {
+        guard !isConfigured else { return true }
+
+        let prefix = FinanceKitImporter.openingBalancePrefix
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        let seeds = transactions.filter { $0.externalID?.hasPrefix(prefix) == true }
+        guard !seeds.isEmpty else { return false }
+
+        // Newest imported transaction per mapped account. Manual entries have no
+        // externalID, so they can't drag a cutoff past the real sync frontier.
+        // The primary checking has no `Account` to key on and so isn't covered
+        // here — it falls back to its seeded balance date below.
+        var newestImported: [String: Date] = [:]
+        for txn in transactions where txn.externalID != nil {
+            guard let accountID = txn.account?.externalID else { continue }
+            newestImported[accountID] = max(newestImported[accountID] ?? .distantPast, txn.date)
+        }
+
+        var cutoffs: [String: Date] = [:]
+        var recoveredCheckingID: String?
+        for seed in seeds {
+            guard let externalID = seed.externalID else { continue }
+            // Rebuild the namespaced account id the rest of this file keys on.
+            let accountID = FinanceKitImporter.accountIDPrefix
+                + externalID.dropFirst(prefix.count)
+            if seed.account == nil { recoveredCheckingID = accountID }
+            cutoffs[accountID] = max(seed.date, newestImported[accountID] ?? .distantPast)
+        }
+        guard !cutoffs.isEmpty else { return false }
+
+        accountCutoffs = cutoffs
+        checkingID = recoveredCheckingID
+        // The per-account cutoffs do the real gating; this only has to be no
+        // later than the earliest of them, and marks setup as done.
+        connectedDate = cutoffs.values.min()
+        return true
+    }
+
     static func markSkipped(_ id: String) {
         var ids = skippedIDs
         guard !ids.contains(id) else { return }
@@ -179,11 +235,21 @@ enum FinanceKitImporter {
         var skipped = 0
     }
 
+    /// Namespaces FinanceKit ids so they can't collide with SimpleFIN's in
+    /// `Account.externalID` / `Transaction.externalID`. Backs the `id` of both
+    /// `FinanceKitAccountSnapshot` and `FinanceKitTransactionSnapshot`.
+    static let accountIDPrefix = "financekit-"
+
+    /// Prefix shared by every seeded opening-balance externalID. Also how
+    /// `FinanceKitConfig.adoptSyncedConnection` recovers which accounts were
+    /// mapped when only the synced data survives.
+    static let openingBalancePrefix = "financekit-opening-balance-"
+
     /// Stable externalID for an account's seeded opening-balance transaction. The
     /// `financekit-opening-balance-` prefix mirrors SimpleFIN's and is excluded from
     /// the credit-card statement window in `creditCardOwed`.
     static func openingBalanceID(for rawID: UUID) -> String {
-        "financekit-opening-balance-\(rawID.uuidString)"
+        openingBalancePrefix + rawID.uuidString
     }
 
     /// The import cutoff to record at setup: the most recent posted transaction

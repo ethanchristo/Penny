@@ -569,24 +569,24 @@ struct MiniRecurringChart: View {
     }
 
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 2) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
             ForEach(0..<leadingBlanks, id: \.self) { _ in
-                Color.clear.frame(height: 9)
+                Color.clear.frame(height: 28)
             }
 
             ForEach(days, id: \.self) { day in
-                RoundedRectangle(cornerRadius: 2)
+                RoundedRectangle(cornerRadius: 4)
                     .fill(Color.gray.opacity(0.12))
-                    .frame(height: 9)
+                    .frame(height: 28)
                     .overlay {
                         if let color = dotColor(for: day) {
                             Circle()
                                 .fill(color)
-                                .frame(width: 4, height: 4)
+                                .frame(width: 8, height: 8)
                         }
                     }
             }
         }
-        .frame(height: 70)
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 }

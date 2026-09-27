@@ -43,8 +43,10 @@ struct FinanceKitAccountSnapshot: Identifiable, Sendable {
 
     /// Namespaced external id stored on Penny's `Account.externalID` and used as
     /// the key in the balances dictionary. The `financekit-` prefix keeps it from
-    /// ever colliding with a SimpleFIN account id.
-    var id: String { "financekit-\(rawID.uuidString)" }
+    /// ever colliding with a SimpleFIN account id. Shares its constant with
+    /// `FinanceKitConfig.adoptSyncedConnection`, which rebuilds these ids from
+    /// the synced opening-balance transactions.
+    var id: String { FinanceKitImporter.accountIDPrefix + rawID.uuidString }
 
     /// "1234.56" + "USD" -> "$1,234.56". Falls back to the raw amount for
     /// non-ISO currency codes.
@@ -64,7 +66,7 @@ struct FinanceKitTransactionSnapshot: Identifiable, Sendable {
     let pending: Bool
 
     /// Namespaced external id used for dedup on Penny's `Transaction.externalID`.
-    var id: String { "financekit-\(rawID.uuidString)" }
+    var id: String { FinanceKitImporter.accountIDPrefix + rawID.uuidString }
 }
 
 /// Plain authorization result so views never need to import FinanceKit.

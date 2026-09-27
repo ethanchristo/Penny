@@ -35,15 +35,26 @@ struct ContentView: View {
                     backgroundColor: backgroundColor
                 )
             } else {
-                HStack(spacing: 0) {
-                    HomeView(
-                        stats: stats,
-                        horizontalSizeClass: horizontalSizeClass ?? .regular,
-                        backgroundColor: backgroundColor
-                    )
-                    
-                    NavigationStack {
-                        TransactionView(backgroundColor: backgroundColor)
+                // One stack for both panes, so anything they push covers the whole
+                // screen and a single gradient sits behind both.
+                NavigationStack {
+                    HStack(spacing: 0) {
+                        HomeView(
+                            stats: stats,
+                            horizontalSizeClass: horizontalSizeClass ?? .regular,
+                            backgroundColor: backgroundColor
+                        )
+
+                        TransactionView()
+                    }
+                    .navigationTitle("Overview")
+                    .background {
+                        LinearGradient(
+                            colors: [backgroundColor.opacity(0.7), .clear, .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .ignoresSafeArea()
                     }
                 }
             }

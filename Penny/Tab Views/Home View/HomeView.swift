@@ -94,89 +94,23 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                NetTotalView(
-                    selectedTimeRange: $selectedTimeRange,
-                    modelContext: modelContext,
-                    scenePhase: scenePhase,
-                    scriptUrl: scriptUrl,
-                    scriptSecret: scriptSecret,
-                    currencyCode: currencyCode,
-                    currencySymbol: currencySymbol,
-                    transactions: transactions,
-                    netIncome: stats.netIncome,
-                    netExpenses: stats.netExpenses,
-                    netTotal: stats.netTotal,
-                    backgroundColor: backgroundColor
-                )
-                .padding(.top)
-                .padding(.horizontal, 24)
-
-                BudgetSummaryView(
-                    summary: summary,
-                    transactions: transactions,
-                    selectedTimeRange: selectedTimeRange
-                )
-                .padding(.top, 16)
-                .padding(.horizontal, 24)
-                
-                if horizontalSizeClass == .compact {
-                    SquigglyLine(wavelength: 16, amplitude: 2)
-                        .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                        .frame(height: 12) // Height should accommodate the amplitude
-                        .padding(.horizontal)
-                        .padding(.top, 16)
-                    
-                    TransactionFilteredView(
-                        editingTransaction: $editingTransaction,
-                        transactions: windowedTransactions,
-                        namespace: namespace,
-                        hideRecent: false,
-                        hideRecurrence: true,
-                        hideUpcoming: true,
-                        hideAllTx: true,
-                        searchString: searchText,
-                        filterAccount: filterAccount,
-                        filterCategory: filterCategory,
-                        filterIsIncome: filterIsIncome
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity) // DIAGNOSTIC
-            .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
-            .navigationTitle("Overview")
-            .toolbarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .phone ? .inlineLarge : .large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        settingsSheet = true
-                    } label: {
-                        Label("Settings", systemImage: "gear")
-                    }
-//                    .matchedTransitionSource(id: "settings", in: namespace)
-                }
-
-                ToolbarSpacer(.fixed, placement: .topBarTrailing)
-
-                if horizontalSizeClass == .compact {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showAddTransaction = true
-                        } label: {
-                            Label("Add Transaction", systemImage: "plus")
+        Group {
+            if horizontalSizeClass == .compact {
+                NavigationStack {
+                    content
+                        .background {
+                            LinearGradient(
+                                colors: [backgroundColor.opacity(0.7), .clear, .clear],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            .ignoresSafeArea()
                         }
-                        .matchedTransitionSource(id: "addTransaction", in: namespace)
-                    }
                 }
-            }
-            .background {
-                LinearGradient(
-                    colors: [backgroundColor.opacity(0.7), .clear, .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+            } else {
+                // Regular width: ContentView hosts this alongside TransactionView in a
+                // single shared NavigationStack and draws the background gradient itself.
+                content
             }
         }
         .task(id: statsTaskID) {
@@ -236,6 +170,85 @@ struct HomeView: View {
                 SettingsView()
             }
 //            .navigationTransition(.zoom(sourceID: "settings", in: namespace))
+        }
+    }
+
+    /// The scrolling overview itself, without a navigation container.
+    private var content: some View {
+        ScrollView {
+            NetTotalView(
+                selectedTimeRange: $selectedTimeRange,
+                modelContext: modelContext,
+                scenePhase: scenePhase,
+                scriptUrl: scriptUrl,
+                scriptSecret: scriptSecret,
+                currencyCode: currencyCode,
+                currencySymbol: currencySymbol,
+                transactions: transactions,
+                netIncome: stats.netIncome,
+                netExpenses: stats.netExpenses,
+                netTotal: stats.netTotal,
+                backgroundColor: backgroundColor
+            )
+            .padding(.top)
+            .padding(.horizontal, 24)
+
+            BudgetSummaryView(
+                summary: summary,
+                transactions: transactions,
+                selectedTimeRange: selectedTimeRange
+            )
+            .padding(.top, 16)
+            .padding(.horizontal, 24)
+            
+            if horizontalSizeClass == .compact {
+                SquigglyLine(wavelength: 16, amplitude: 2)
+                    .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .frame(height: 12) // Height should accommodate the amplitude
+                    .padding(.horizontal)
+                    .padding(.top, 16)
+                
+                TransactionFilteredView(
+                    editingTransaction: $editingTransaction,
+                    transactions: windowedTransactions,
+                    namespace: namespace,
+                    hideRecent: false,
+                    hideRecurrence: true,
+                    hideUpcoming: true,
+                    hideAllTx: true,
+                    searchString: searchText,
+                    filterAccount: filterAccount,
+                    filterCategory: filterCategory,
+                    filterIsIncome: filterIsIncome
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity) // DIAGNOSTIC
+        .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+        .navigationTitle("Overview")
+        .toolbarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .phone ? .inlineLarge : .large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    settingsSheet = true
+                } label: {
+                    Label("Settings", systemImage: "gear")
+                }
+//                    .matchedTransitionSource(id: "settings", in: namespace)
+            }
+
+            ToolbarSpacer(.fixed, placement: .topBarTrailing)
+
+            if horizontalSizeClass == .compact {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showAddTransaction = true
+                    } label: {
+                        Label("Add Transaction", systemImage: "plus")
+                    }
+                    .matchedTransitionSource(id: "addTransaction", in: namespace)
+                }
+            }
         }
     }
 
@@ -357,7 +370,15 @@ struct HomeView: View {
     /// `FinanceKitImporter`). On-device data, so — unlike SimpleFIN — there's no API
     /// limit to throttle against; it runs on every open. No-ops if not connected.
     private func silentFinanceKitSync() async {
-        guard FinanceKitConfig.isConfigured else { return }
+        if !FinanceKitConfig.isConfigured {
+            // Bookkeeping missing but the mapping already synced (new device or
+            // reinstall) — rebuild it so syncing resumes without a trip through
+            // Settings. Only once Wallet access is granted, so the connection is
+            // never marked live while authorization is denied.
+            guard await FinanceKitClient.authorizationState() == .authorized,
+                  FinanceKitConfig.adoptSyncedConnection(in: modelContext)
+            else { return }
+        }
 
         let floor = FinanceKitConfig.accountCutoffs.values.min()
             ?? FinanceKitConfig.connectedDate
@@ -431,8 +452,8 @@ struct HomeView: View {
 
 /// A compact glass card under the net total summarizing where the money is going: a
 /// highlighted overall-budget section (only when the overall budget is enabled), the
-/// budgets the user has overspent, the expenses coming due next, the biggest spending
-/// categories, and the recurring budgets still under their limit.
+/// budgets the user has overspent, the expenses coming due next, and the biggest
+/// spending categories.
 ///
 /// Presentation only — the sections come pre-computed in `Summary`, which HomeView
 /// owns and refreshes when the underlying data changes. Every row is a control rather
@@ -441,15 +462,11 @@ struct HomeView: View {
 struct BudgetSummaryView: View {
     @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(OverallBudget.self) private var overallBudget
 
     @Namespace private var namespace
 
     @State private var navRoute: SummaryRoute?
-    /// Same destinations as `navRoute`, but presented full-screen — used in the
-    /// regular-width side-by-side layout (see `open`).
-    @State private var coverRoute: SummaryRoute?
     @State private var editingTransaction: Transaction?
 
     @State private var haptics: Int = 0
@@ -463,17 +480,14 @@ struct BudgetSummaryView: View {
     /// the subtitle on a category's spending detail.
     let selectedTimeRange: HomeTimeRange
 
-    /// Everywhere a summary row can go. `Identifiable` as well as `Hashable` so the
-    /// same value can drive both the pushed destination and the full-screen cover.
-    private enum SummaryRoute: Hashable, Identifiable {
+    /// Everywhere a summary row can go.
+    private enum SummaryRoute: Hashable {
         case overall
         case budget(SummaryTarget)
         case categorySpending(Category)
         case allBudgets
         case allCategories
         case allTransactions
-
-        var id: Self { self }
     }
 
     // MARK: - Overall budget
@@ -483,17 +497,11 @@ struct BudgetSummaryView: View {
 
     // MARK: - Navigation
 
-    /// Routes to `route` — pushed within HomeView's own stack when compact (it already
-    /// fills the screen), or presented full-screen when regular-width (side-by-side
-    /// layout), so it covers both panes instead of just the left one. Matches how the
-    /// net-total buttons above this card navigate.
+    /// Pushes `route` onto HomeView's navigation stack. Matches how the net-total
+    /// buttons above this card navigate.
     private func open(_ route: SummaryRoute) {
         haptics += 1
-        if horizontalSizeClass == .regular {
-            coverRoute = route
-        } else {
-            navRoute = route
-        }
+        navRoute = route
     }
 
     @ViewBuilder
@@ -522,7 +530,6 @@ struct BudgetSummaryView: View {
 
     var body: some View {
         let overspent = summary.overspent
-        let underspent = summary.underspent
         let upcoming = summary.upcoming
         let topCategories = summary.topSpending
 
@@ -531,32 +538,27 @@ struct BudgetSummaryView: View {
 
         if showContent {
             VStack(alignment: .leading, spacing: 16) {
-                Label("Summary", systemImage: "text.line.3.summary")
+                Label("Summary", systemImage: "text.line.2.summary")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                if showOverall {
-                    overallSection
-                }
+//                if showOverall {
+//                    overallSection
+//                }
 
                 if !overspent.isEmpty {
-                    divider(showOverall)
-                    budgetList(title: "Overspent", items: overspent, over: true)
+//                    divider(showOverall)
+                    budgetList(title: "Overspent", items: overspent)
                 }
 
                 if !upcoming.isEmpty {
-                    divider(showOverall || !overspent.isEmpty)
+//                    divider(showOverall || !overspent.isEmpty)
                     upcomingSection(upcoming)
                 }
 
                 if !topCategories.isEmpty {
-                    divider(showOverall || !overspent.isEmpty || !upcoming.isEmpty)
+//                    divider(showOverall || !overspent.isEmpty || !upcoming.isEmpty)
                     topSpendingSection(topCategories)
-                }
-
-                if !underspent.isEmpty {
-                    divider(showOverall || !overspent.isEmpty || !upcoming.isEmpty || !topCategories.isEmpty)
-                    budgetList(title: "Underspent", items: underspent, over: false, showsSpending: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -565,20 +567,6 @@ struct BudgetSummaryView: View {
             .sensoryFeedback(.impact(weight: .light), trigger: haptics)
             .navigationDestination(item: $navRoute) { route in
                 destination(for: route)
-            }
-            .fullScreenCover(item: $coverRoute) { route in
-                NavigationStack {
-                    destination(for: route)
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button {
-                                    coverRoute = nil
-                                } label: {
-                                    Label("Close", systemImage: "xmark")
-                                }
-                            }
-                        }
-                }
             }
             .sheet(item: $editingTransaction) { transaction in
                 NavigationStack {
@@ -595,7 +583,7 @@ struct BudgetSummaryView: View {
         if hasPrecedingSection { Divider().opacity(0.4) }
     }
 
-    /// The overall-budget block, shaped like an underspent row — glyph, name, and a
+    /// The overall-budget block, shaped like the budget rows — glyph, name, and a
     /// spent-of-limit caption, with what's left on the right — but sized up and sat on
     /// a tinted background, since it's the card's headline figure. Opens the overall
     /// budget's insights page.
@@ -604,10 +592,6 @@ struct BudgetSummaryView: View {
             open(.overall)
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "chart.pie")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Overall Budget")
                         .font(.headline)
@@ -618,7 +602,7 @@ struct BudgetSummaryView: View {
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 1) {
+                VStack(spacing: 1) {
                     // Always a magnitude — the label below says which side of the
                     // budget it falls on.
                     Text(abs(overallRemaining), format: .currency(code: currencyCode))
@@ -641,11 +625,9 @@ struct BudgetSummaryView: View {
     }
 
     /// A titled list of budget rows with a subtotal, each row opening that budget.
-    /// `over` shows amounts as negative (overspend); otherwise they're the positive
-    /// remaining. `showsSpending` adds the spent-of-limit line under each name, the
-    /// way the upcoming rows carry their due date.
+    /// Amounts are magnitudes — the overage, as the section title says.
     @ViewBuilder
-    private func budgetList(title: String, items: [SummaryBudgetStat], over: Bool, showsSpending: Bool = false) -> some View {
+    private func budgetList(title: String, items: [SummaryBudgetStat]) -> some View {
         let subtotal = items.reduce(0) { $0 + $1.amount }
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader(title, subtotal: subtotal, route: .allBudgets)
@@ -656,17 +638,10 @@ struct BudgetSummaryView: View {
                 } label: {
                     HStack(spacing: 8) {
                         Text(item.symbol)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(item.name)
-                                .lineLimit(1)
-                            if showsSpending {
-                                Text("\(item.spent.formatted(.currency(code: currencyCode))) spent of \(item.limit.formatted(.currency(code: currencyCode)))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        Text(item.name)
+                            .lineLimit(1)
                         Spacer()
-                        Text(over ? -item.amount : item.amount, format: .currency(code: currencyCode))
+                        Text(item.amount, format: .currency(code: currencyCode))
                             .monospacedDigit()
                     }
                     .font(.subheadline)

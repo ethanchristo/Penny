@@ -24,19 +24,13 @@ enum SummaryTarget: Hashable {
     }
 }
 
-/// One budget row: a magnitude (always positive here — the card decides whether to
-/// show it as an overage or as headroom) with its name/symbol, what it has spent of
-/// what it's allowed, and where it leads.
+/// One budget row: how far past its limit the budget is, as a positive magnitude,
+/// with its name/symbol and where it leads.
 struct SummaryBudgetStat: Identifiable {
     let id: String
     let symbol: String
     let name: String
     let amount: Double
-    /// Spend and limit for the row's subtitle. Carried separately from `amount`
-    /// because headroom isn't always `limit - spent`: a contribute-toward freestanding
-    /// budget measures what's left against what's been contributed so far.
-    let spent: Double
-    let limit: Double
     let target: SummaryTarget
 }
 
@@ -63,7 +57,7 @@ struct SummaryUpcomingExpense: Identifiable {
 }
 
 /// The aggregation behind Home's summary card: what's overspent, what's due next,
-/// where the money went, and what still has headroom.
+/// and where the money went.
 ///
 /// This is a cache, not a set of computed properties, and that's the whole point.
 /// Every section here is O(categories × transactions) with a recurrence expansion
@@ -79,8 +73,6 @@ struct SummaryUpcomingExpense: Identifiable {
 final class Summary {
     /// Budgets spent past their limit, biggest overage first.
     private(set) var overspent: [SummaryBudgetStat] = []
-    /// Recurring budgets still under their limit, most room first.
-    private(set) var underspent: [SummaryBudgetStat] = []
     /// The next expenses due, soonest first.
     private(set) var upcoming: [SummaryUpcomingExpense] = []
     /// The window's biggest spending categories, largest first.
@@ -92,12 +84,19 @@ final class Summary {
     /// True when there's nothing to summarize — the card hides itself (unless the
     /// overall budget is on, which it renders regardless).
     var isEmpty: Bool {
-        overspent.isEmpty && underspent.isEmpty && upcoming.isEmpty && topSpending.isEmpty
+        overspent.isEmpty && upcoming.isEmpty && topSpending.isEmpty
     }
 
-    /// How many rows the upcoming/top-spending sections keep. The card is a summary,
-    /// not a list — its section headers lead to the full views.
-    private let rowLimit = 4
+    /// How many rows each capped section keeps. The card is a summary, not a list —
+    /// its section headers lead to the full views. Upcoming is the tightest since it
+    /// has no horizon: the further down the list, the further out the due date.
+    private let upcomingLimit = 2
+    private let topSpendingLimit = 4
+
+    /// The share of the window's total spending a category has to reach to earn a row
+    /// in Top Spending, so the section shows where the money actually went instead of
+    /// padding itself out with rounding errors.
+    private let topSpendingShareFloor = 0.05
 
     /// The store contents one refresh reads from, bundled so each section builder
     /// doesn't take the same four parameters.
@@ -123,13 +122,12 @@ final class Summary {
         let overspentRows = overspentBudgets(inputs)
 
         overspent = overspentRows
-        underspent = underspentBudgets(inputs)
-        upcoming = Array(upcomingExpenses(inputs).prefix(rowLimit))
-        topSpending = Array(topSpendingCategories(inputs, excluding: overspentRows).prefix(rowLimit))
+        upcoming = Array(upcomingExpenses(inputs).prefix(upcomingLimit))
+        topSpending = Array(topSpendingCategories(inputs, excluding: overspentRows).prefix(topSpendingLimit))
         overallSpent = overallBudgetTotal(for: overallBudget, in: transactions, by: 0)
     }
 
-    // MARK: - Overspent / underspent
+    // MARK: - Overspent
 
     /// Budgets currently spent past their limit, biggest overage first. A pre-funded
     /// one-time budget is dropped once today is past the end of the selected-range
@@ -149,8 +147,6 @@ final class Summary {
                                      symbol: category.symbol,
                                      name: category.name,
                                      amount: spent - limit,
-                                     spent: spent,
-                                     limit: limit,
                                      target: .categoryBudget(category)))
             }
         }
@@ -167,47 +163,7 @@ final class Summary {
                                  symbol: budget.displaySymbol,
                                  name: budget.displayName,
                                  amount: -budget.remaining,
-                                 spent: budget.used,
-                                 limit: budget.amount,
                                  target: .freestandingBudget(budget)))
-        }
-
-        return results.sorted { $0.amount > $1.amount }
-    }
-
-    /// Recurring budgets still under their limit, most room first. One-time budgets are
-    /// intentionally skipped — an ended envelope isn't "underspent", it's just done.
-    private func underspentBudgets(_ input: Inputs) -> [SummaryBudgetStat] {
-        var results: [SummaryBudgetStat] = []
-
-        // Category budgets are always recurring.
-        for category in input.categories {
-            guard let budget = category.budget, budget.hasBudget, !budget.isFreestanding else { continue }
-            let limit = budget.amount
-            guard limit > 0 else { continue }
-            let spent = budgetTotal(for: category, in: input.transactions, by: 0)
-            if spent < limit {
-                results.append(.init(id: "cat-\(category.id)",
-                                     symbol: category.symbol,
-                                     name: category.name,
-                                     amount: limit - spent,
-                                     spent: spent,
-                                     limit: limit,
-                                     target: .categoryBudget(category)))
-            }
-        }
-
-        // Recurring freestanding budgets only.
-        for budget in input.budgets where budget.hasBudget && budget.isFreestanding && budget.isRecurring {
-            if budget.remaining > 0 {
-                results.append(.init(id: "budget-\(budget.id)",
-                                     symbol: budget.displaySymbol,
-                                     name: budget.displayName,
-                                     amount: budget.remaining,
-                                     spent: budget.used,
-                                     limit: budget.amount,
-                                     target: .freestandingBudget(budget)))
-            }
         }
 
         return results.sorted { $0.amount > $1.amount }
@@ -248,14 +204,23 @@ final class Summary {
 
     // MARK: - Top spending categories
 
-    /// The biggest spending categories in the selected window, largest first. Anything
-    /// already called out as overspent is left out — those have their own section, and
-    /// repeating them here would just be the same bad news twice.
+    /// The biggest spending categories in the selected window, largest first, keeping
+    /// only those worth at least `topSpendingShareFloor` of the window's spending.
+    /// Anything already called out as overspent is left out — those have their own
+    /// section, and repeating them here would just be the same bad news twice.
     private func topSpendingCategories(_ input: Inputs, excluding overspent: [SummaryBudgetStat]) -> [CategorySlice] {
         let overspentIDs = Set(overspent.map(\.id))
-        return categorySpendData(transactions: input.transactions,
-                                 categories: input.categories,
-                                 window: windowBounds(for: input.selectedTimeRange, offset: 0))
-            .filter { !overspentIDs.contains("cat-\($0.category.id)") }
+        let slices = categorySpendData(transactions: input.transactions,
+                                       categories: input.categories,
+                                       window: windowBounds(for: input.selectedTimeRange, offset: 0))
+
+        // The share is measured against ALL of the window's category spending — the
+        // overspent categories included. They're dropped from the rows below, but
+        // taking them out of the denominator would inflate everyone else's share.
+        let windowSpending = slices.reduce(0) { $0 + $1.amount }
+        guard windowSpending > 0 else { return [] }
+        let floor = windowSpending * topSpendingShareFloor
+
+        return slices.filter { $0.amount >= floor && !overspentIDs.contains("cat-\($0.category.id)") }
     }
 }
