@@ -56,6 +56,7 @@ struct SpendingView: View {
                     window: window
                 )
             }
+            .scrollIndicators(.hidden)
             .scrollClipDisabled()
             .animation(.bouncy, value: dateOffset)
             

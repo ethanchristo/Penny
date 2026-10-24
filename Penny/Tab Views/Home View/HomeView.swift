@@ -193,13 +193,37 @@ struct HomeView: View {
             .padding(.top)
             .padding(.horizontal, 24)
 
-            BudgetSummaryView(
-                summary: summary,
-                transactions: transactions,
-                selectedTimeRange: selectedTimeRange
-            )
-            .padding(.top, 16)
+            HStack {
+                Text("Spending")
+                Spacer()
+            }
+            .font(.headline)
             .padding(.horizontal, 24)
+            .padding(.top, 16)
+            
+            ScrollView(.horizontal) {
+                SummaryView(
+                    currencyCode: currencyCode,
+                    transactions: transactions,
+                    selectedTimeRange: selectedTimeRange
+                )
+            }
+            .scrollClipDisabled()
+            .padding(.horizontal, 24)
+            
+            TransactionFilteredView(
+                editingTransaction: $editingTransaction,
+                transactions: windowedTransactions,
+                namespace: namespace,
+                hideRecent: true,
+                hideRecurrence: true,
+                hideUpcoming: false,
+                hideAllTx: true,
+                searchString: searchText,
+                filterAccount: filterAccount,
+                filterCategory: filterCategory,
+                filterIsIncome: filterIsIncome
+            )
             
             if horizontalSizeClass == .compact {
                 SquigglyLine(wavelength: 16, amplitude: 2)
@@ -450,15 +474,6 @@ struct HomeView: View {
     }
 }
 
-/// A compact glass card under the net total summarizing where the money is going: a
-/// highlighted overall-budget section (only when the overall budget is enabled), the
-/// budgets the user has overspent, the expenses coming due next, and the biggest
-/// spending categories.
-///
-/// Presentation only — the sections come pre-computed in `Summary`, which HomeView
-/// owns and refreshes when the underlying data changes. Every row is a control rather
-/// than a label: budgets open their insights page, upcoming expenses open the
-/// transaction, and categories open their spending detail.
 struct BudgetSummaryView: View {
     @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
 
