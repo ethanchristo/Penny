@@ -7,10 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		13B0D33D2F16494AE012CA29 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 0022A9C2D898BFA3D8ACA1EF /* OrderedCollections */; };
+		4D64D67571AB0AC83055F999 /* BudgetSummaryConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = E699DB453058F7A5000651CE /* BudgetSummaryConfig.swift */; };
 		E62B49C32F730E6200779DB5 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6A3119B2F730BC400F16CD9 /* WidgetKit.framework */; };
 		E62B49C42F730E6200779DB5 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6A3119D2F730BC400F16CD9 /* SwiftUI.framework */; };
 		E62B49CF2F730E6300779DB5 /* NetTotalWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E699DB463058F7A5000651CE /* BudgetSummaryConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = E699DB453058F7A5000651CE /* BudgetSummaryConfig.swift */; };
+		E6AD038330902D2900CA2EEF /* PennyFinanceMonitor.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = E6AD037B30902D2900CA2EEF /* PennyFinanceMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E6D293DE301007F800728795 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = E6D293DD301007F800728795 /* OrderedCollections */; };
 		E6D293E2301008B400728795 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = E6D293E1301008B400728795 /* OrderedCollections */; };
 /* End PBXBuildFile section */
@@ -30,6 +33,13 @@
 			remoteGlobalIDString = E62B49C12F730E6200779DB5;
 			remoteInfo = NetTotalWidgetExtension;
 		};
+		E6AD038130902D2900CA2EEF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E67E44152F04B2C600FB038D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E6AD037A30902D2900CA2EEF;
+			remoteInfo = PennyFinanceMonitor;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -38,6 +48,7 @@
 			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
 			dstSubfolder = Product;
 			files = (
+				E6AD038330902D2900CA2EEF /* PennyFinanceMonitor.appex in Embed ExtensionKit Extensions */,
 			);
 			name = "Embed ExtensionKit Extensions";
 		};
@@ -67,9 +78,41 @@
 		E699DB453058F7A5000651CE /* BudgetSummaryConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetSummaryConfig.swift; sourceTree = "<group>"; };
 		E6A3119B2F730BC400F16CD9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		E6A3119D2F730BC400F16CD9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		E6AD037B30902D2900CA2EEF /* PennyFinanceMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = PennyFinanceMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		BD84DACCB7C65CFE96BFBA83 /* Exceptions for "Penny" folder in "PennyFinanceMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"App Intent/AddTransactionIntent.swift",
+				"App Intent/BudgetIntent.swift",
+				"App Intent/CategoryIntent.swift",
+				"App Intent/NetTotalIntent.swift",
+				"App Intent/OpenEntityIntents.swift",
+				"App Intent/TransactionIntent.swift",
+				Classes/Account.swift,
+				Classes/Budget.swift,
+				Classes/Category.swift,
+				Classes/Database.swift,
+				Classes/Housing.swift,
+				Classes/Summary.swift,
+				Classes/Transaction.swift,
+				Helpers/AppRouter.swift,
+				Helpers/ColorHex.swift,
+				Helpers/Enums.swift,
+				Helpers/Extensions.swift,
+				Helpers/Functions.swift,
+				Helpers/HomeStats.swift,
+				Helpers/InsightsChartsCore.swift,
+				Helpers/Structs.swift,
+				"Settings/Category View/EditCategoryView.swift",
+				Settings/CategoryRulesView.swift,
+				Settings/FinanceKitClient.swift,
+				Settings/FinanceKitImporter.swift,
+			);
+			target = E6AD037A30902D2900CA2EEF /* PennyFinanceMonitor */;
+		};
 		E62B49D02F730E6300779DB5 /* Exceptions for "NetTotalWidget" folder in "NetTotalWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -113,6 +156,13 @@
 			);
 			target = E67E441C2F04B2C600FB038D /* Penny */;
 		};
+		E6AD038730902D2900CA2EEF /* Exceptions for "PennyFinanceMonitor" folder in "PennyFinanceMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E6AD037A30902D2900CA2EEF /* PennyFinanceMonitor */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -134,8 +184,17 @@
 			exceptions = (
 				E6684B342FCD2F0D009267CA /* Exceptions for "Penny" folder in "Penny" target */,
 				E62B4A3F2F736CCA00779DB5 /* Exceptions for "Penny" folder in "NetTotalWidgetExtension" target */,
+				BD84DACCB7C65CFE96BFBA83 /* Exceptions for "Penny" folder in "PennyFinanceMonitor" target */,
 			);
 			path = Penny;
+			sourceTree = "<group>";
+		};
+		E6AD037C30902D2900CA2EEF /* PennyFinanceMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E6AD038730902D2900CA2EEF /* Exceptions for "PennyFinanceMonitor" folder in "PennyFinanceMonitor" target */,
+			);
+			path = PennyFinanceMonitor;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -160,6 +219,12 @@
 				E6D293DE301007F800728795 /* OrderedCollections in Frameworks */,
 			);
 		};
+		E6AD037830902D2900CA2EEF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				13B0D33D2F16494AE012CA29 /* OrderedCollections in Frameworks */,
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -169,6 +234,7 @@
 				E67E441F2F04B2C600FB038D /* Penny */,
 				E62B49C52F730E6200779DB5 /* NetTotalWidget */,
 				E617A04930294679004DBDEC /* PennyTests */,
+				E6AD037C30902D2900CA2EEF /* PennyFinanceMonitor */,
 				E6A3119A2F730BC400F16CD9 /* Frameworks */,
 				E699DB453058F7A5000651CE /* BudgetSummaryConfig.swift */,
 				E67E441E2F04B2C600FB038D /* Products */,
@@ -181,6 +247,7 @@
 				E67E441D2F04B2C600FB038D /* Penny.app */,
 				E62B49C22F730E6200779DB5 /* NetTotalWidgetExtension.appex */,
 				E617A04830294679004DBDEC /* PennyTests.xctest */,
+				E6AD037B30902D2900CA2EEF /* PennyFinanceMonitor.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -254,6 +321,7 @@
 			);
 			dependencies = (
 				E62B49CE2F730E6300779DB5 /* PBXTargetDependency */,
+				E6AD038230902D2900CA2EEF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E67E441F2F04B2C600FB038D /* Penny */,
@@ -266,6 +334,27 @@
 			productReference = E67E441D2F04B2C600FB038D /* Penny.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E6AD037A30902D2900CA2EEF /* PennyFinanceMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E6AD038630902D2900CA2EEF /* Build configuration list for PBXNativeTarget "PennyFinanceMonitor" */;
+			buildPhases = (
+				E6AD037730902D2900CA2EEF /* Sources */,
+				E6AD037830902D2900CA2EEF /* Frameworks */,
+				E6AD037930902D2900CA2EEF /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				E6AD037C30902D2900CA2EEF /* PennyFinanceMonitor */,
+			);
+			name = PennyFinanceMonitor;
+			packageProductDependencies = (
+				0022A9C2D898BFA3D8ACA1EF /* OrderedCollections */,
+			);
+			productName = PennyFinanceMonitor;
+			productReference = E6AD037B30902D2900CA2EEF /* PennyFinanceMonitor.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -273,7 +362,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2700;
+				LastSwiftUpdateCheck = 2710;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					E617A04730294679004DBDEC = {
@@ -285,6 +374,9 @@
 					};
 					E67E441C2F04B2C600FB038D = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					E6AD037A30902D2900CA2EEF = {
+						CreatedOnToolsVersion = 27.1;
 					};
 				};
 			};
@@ -308,6 +400,7 @@
 				E67E441C2F04B2C600FB038D /* Penny */,
 				E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */,
 				E617A04730294679004DBDEC /* PennyTests */,
+				E6AD037A30902D2900CA2EEF /* PennyFinanceMonitor */,
 			);
 		};
 /* End PBXProject section */
@@ -324,6 +417,11 @@
 			);
 		};
 		E67E441B2F04B2C600FB038D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		E6AD037930902D2900CA2EEF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -347,6 +445,12 @@
 			files = (
 			);
 		};
+		E6AD037730902D2900CA2EEF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				4D64D67571AB0AC83055F999 /* BudgetSummaryConfig.swift in Sources */,
+			);
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -359,6 +463,11 @@
 			isa = PBXTargetDependency;
 			target = E62B49C12F730E6200779DB5 /* NetTotalWidgetExtension */;
 			targetProxy = E62B49CD2F730E6300779DB5 /* PBXContainerItemProxy */;
+		};
+		E6AD038230902D2900CA2EEF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E6AD037A30902D2900CA2EEF /* PennyFinanceMonitor */;
+			targetProxy = E6AD038130902D2900CA2EEF /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -695,6 +804,67 @@
 			};
 			name = Release;
 		};
+		E6AD038430902D2900CA2EEF /* Debug configuration for PBXNativeTarget "PennyFinanceMonitor" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PennyFinanceMonitor/PennyFinanceMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PennyFinanceMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PennyFinanceMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ethanchristo.Penny.PennyFinanceMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E6AD038530902D2900CA2EEF /* Release configuration for PBXNativeTarget "PennyFinanceMonitor" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PennyFinanceMonitor/PennyFinanceMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PennyFinanceMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PennyFinanceMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ethanchristo.Penny.PennyFinanceMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -730,6 +900,14 @@
 			);
 			defaultConfigurationName = Release;
 		};
+		E6AD038630902D2900CA2EEF /* Build configuration list for PBXNativeTarget "PennyFinanceMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E6AD038430902D2900CA2EEF /* Debug configuration for PBXNativeTarget "PennyFinanceMonitor" */,
+				E6AD038530902D2900CA2EEF /* Release configuration for PBXNativeTarget "PennyFinanceMonitor" */,
+			);
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -744,6 +922,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0022A9C2D898BFA3D8ACA1EF /* OrderedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E6D293DC301007F800728795 /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = OrderedCollections;
+		};
 		E6D293DD301007F800728795 /* OrderedCollections */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = E6D293DC301007F800728795 /* XCRemoteSwiftPackageReference "swift-collections" */;

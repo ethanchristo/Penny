@@ -101,3 +101,37 @@ struct BudgetQuery: EntityQuery {
         return budgets.map { BudgetEntity(budget: $0) }
     }
 }
+
+/// Lets the system ask Penny to rebuild Budget entries in Spotlight (e.g. after the index
+/// is purged or restored) instead of waiting for the next launch-time index pass.
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, *)
+extension BudgetQuery: IndexedEntityQuery {
+    @MainActor
+    func reindexEntities(for identifiers: [UUID], indexDescription: CSSearchableIndexDescription) async throws {
+        let index = CSSearchableIndex(name: "PennyEntities")
+        let ids = identifiers
+        let context = SharedDatabase.shared.container.mainContext
+        let descriptor = FetchDescriptor<Budget>(predicate: #Predicate { ids.contains($0.id) && $0.hasBudget })
+        let entities = try context.fetch(descriptor).map { BudgetEntity(budget: $0) }
+
+        // Identifiers that no longer map to an active budget were deleted or
+        // deactivated — drop them so Spotlight doesn't surface stale results.
+        let found = Set(entities.map(\.id))
+        let stale = identifiers.filter { !found.contains($0) }
+        if !stale.isEmpty {
+            try await index.deleteAppEntities(identifiedBy: stale, ofType: BudgetEntity.self)
+        }
+        try await index.indexAppEntities(entities)
+    }
+
+    @MainActor
+    func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
+        let index = CSSearchableIndex(name: "PennyEntities")
+        let context = SharedDatabase.shared.container.mainContext
+        let descriptor = FetchDescriptor<Budget>(predicate: #Predicate { $0.hasBudget })
+        let entities = try context.fetch(descriptor).map { BudgetEntity(budget: $0) }
+
+        try await index.deleteAppEntities(ofType: BudgetEntity.self)
+        try await index.indexAppEntities(entities)
+    }
+}

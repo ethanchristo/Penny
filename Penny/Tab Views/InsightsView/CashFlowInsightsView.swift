@@ -50,9 +50,7 @@ struct CashFlowInsightsView: View {
         let totalOut = data.links.filter { $0.source == "cashflow" }.reduce(0.0) { $0 + $1.value }
         let net = totalIn - totalOut
 
-        return ScrollView(.vertical, showsIndicators: false) {
-
-
+        return AdaptiveSplitLayout {
             if data.nodes.isEmpty {
                 ContentUnavailableView(
                     "No Cash Flow",
@@ -72,8 +70,11 @@ struct CashFlowInsightsView: View {
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 26))
                     .padding(.horizontal, 12)
                     .animation(.smooth, value: dateOffset)
-            }
 
+                flowList(title: "In", column: 0, data: data)
+                flowList(title: "Out", column: 2, data: data)
+            }
+        } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
                 transactions: windowedTransactions,
@@ -89,6 +90,14 @@ struct CashFlowInsightsView: View {
         .navigationTitle("Cash Flow")
         .navigationSubtitle(windowTimeRange.rawValue)
         .navigationBarTitleDisplayMode(.inline)
+        .background {
+            LinearGradient(
+                colors: [InsightsOptions.cashFlow.color.opacity(0.35), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
         .toolbarVisibility(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -212,6 +221,62 @@ struct CashFlowInsightsView: View {
         }
         .padding(.horizontal)
         .padding(.top, 8)
+    }
+
+    /// A category list styled like the spending chart's legend, for one side of
+    /// the diagram ("In" = left column, "Out" = right column).
+    @ViewBuilder
+    private func flowList(
+        title: String,
+        column: Int,
+        data: (nodes: [SankeyNode], links: [SankeyLink])
+    ) -> some View {
+        let rows: [(node: SankeyNode, amount: Double)] = data.nodes
+            .filter { $0.column == column }
+            .map { node in
+                let amount = data.links
+                    .filter { column == 0 ? $0.source == node.id : $0.target == node.id }
+                    .reduce(0.0) { $0 + $1.value }
+                return (node, amount)
+            }
+            .sorted { $0.amount > $1.amount }
+        let total = rows.reduce(0.0) { $0 + $1.amount }
+
+        if !rows.isEmpty {
+            VStack(spacing: 10) {
+                HStack {
+                    Text(title)
+                        .font(.headline)
+
+                    Spacer()
+
+                    Text(amountTruncation(for: total, currencySymbol: currencySymbol))
+                        .font(.headline)
+                        .contentTransition(.numericText())
+                }
+                .padding(.horizontal, 4)
+
+                ForEach(rows, id: \.node.id) { row in
+                    InsightBreakdownRow(
+                        symbol: row.node.symbol,
+                        name: displayName(for: row.node),
+                        color: row.node.color,
+                        share: total > 0 ? row.amount / total : 0,
+                        amount: row.amount
+                    )
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 12)
+            .animation(.smooth, value: dateOffset)
+        }
+    }
+
+    /// A node's name without its leading glyph — category labels are built as
+    /// "<symbol> <name>", and the breakdown row shows the symbol in its own badge.
+    private func displayName(for node: SankeyNode) -> String {
+        guard let symbol = node.symbol, node.label.hasPrefix(symbol + " ") else { return node.label }
+        return String(node.label.dropFirst(symbol.count + 1))
     }
 
     private func summaryChip(title: String, amount: Double) -> some View {

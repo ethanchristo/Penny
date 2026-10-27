@@ -22,7 +22,18 @@ struct SummaryView: View {
         let color: Color
         let amount: Double
         let overspent: Bool
+        let route: Route
     }
+
+    /// Where a tile goes when tapped.
+    private enum Route: Hashable {
+        case categoryBudget(Category)
+        case freestandingBudget(Budget)
+        case categorySpending(Category)
+    }
+
+    @Namespace private var namespace
+    @State private var navRoute: Route?
 
     /// Overspent budget tiles followed by the top-spending categories. Built in one
     /// pass so the overspent test is evaluated once per budget, and the same result
@@ -53,7 +64,8 @@ struct SummaryView: View {
                                   symbol: budget.displaySymbol,
                                   color: budget.category?.color ?? budget.color,
                                   amount: remaining,
-                                  overspent: true))
+                                  overspent: true,
+                                  route: budget.category.map { .categoryBudget($0) } ?? .freestandingBudget(budget)))
         }
 
         // Top three categories by spend in the selected range, skipping overspent ones.
@@ -62,11 +74,11 @@ struct SummaryView: View {
                                        window: windowBounds(for: selectedTimeRange, offset: 0))
         let spent = slices
             .sorted { $0.amount > $1.amount }
-            .map(\.category)
-            .filter { !overspentCategories.contains($0.persistentModelID) }
+            .filter { !overspentCategories.contains($0.category.persistentModelID) }
             .prefix(3)
-            .map { Tile(id: $0.persistentModelID, symbol: $0.symbol, color: $0.color,
-                        amount: 0.01, overspent: false) }
+            .map { Tile(id: $0.category.persistentModelID, symbol: $0.category.symbol,
+                        color: $0.category.color, amount: $0.amount, overspent: false,
+                        route: .categorySpending($0.category)) }
 
         return overspent + spent
     }
@@ -74,15 +86,38 @@ struct SummaryView: View {
     var body: some View {
         HStack {
             ForEach(tiles) { tile in
-                summaryTile(symbol: tile.symbol, color: tile.color,
-                            amount: tile.amount, overspent: tile.overspent)
+                Button {
+                    navRoute = tile.route
+                } label: {
+                    summaryTile(symbol: tile.symbol, color: tile.color,
+                                amount: tile.amount, overspent: tile.overspent)
+                }
+                .buttonStyle(.plain)
+                .matchedTransitionSource(id: tile.id, in: namespace)
             }
         }
-        
+        .navigationDestination(item: $navRoute) { route in
+            destination(for: route)
+        }
+    }
+
+    @ViewBuilder
+    private func destination(for route: Route) -> some View {
+        switch route {
+        case .categoryBudget(let category):
+            BudgetInsightsView(namespace: namespace,
+                               source: .category(category, filter: categoriedTransactions(for: transactions, with: category)))
+        case .freestandingBudget(let budget):
+            FreestandingBudgetInsightsView(budget: budget, namespace: namespace)
+        case .categorySpending(let category):
+            CategorySpendingView(category: category,
+                                 transactions: categoriedTransactions(for: transactions, with: category),
+                                 selectedTimeRange: selectedTimeRange)
+        }
     }
     
     private func summaryTile(symbol: String, color: Color, amount: Double, overspent: Bool) -> some View {
-        VStack {
+        HStack {
             Text(symbol)
                 .font(.title)
                 .frame(width: 50, height: 50)
@@ -99,16 +134,19 @@ struct SummaryView: View {
                     .font(.caption)
                     .underline()
             }
-            .padding(.top, 12)
+//            .padding(.leading, 10)
         }
-        .padding(18)
+        .padding(12)
         .glassEffect()
     }
     
     func formatToThreeDigits(_ value: Double) -> String {
         var amount = ""
+        if value >= 1000 {
+            amount = amountTruncation(for: value)
+        }
         // If the number is 100 or greater, show it as an integer with no decimals (e.g., 300)
-        if value >= 100 {
+        else if value >= 100 {
             amount = String(format: "%.0f", value)
         }
         // If it's between 10 and 100, we need 1 decimal place to hit 3 digits (e.g., 12.3)

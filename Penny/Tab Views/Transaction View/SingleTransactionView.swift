@@ -343,7 +343,7 @@ struct EditTransactionView: View {
             "Utilization"
         }
     }
-    
+        
     let transaction: Transaction?
     let category: Category?
     let budget: Budget?
@@ -608,10 +608,12 @@ struct EditTransactionView: View {
             ToolbarItem {
                 Picker("Type", selection: $draft.isIncome) {
                     if draft.budget?.preFunding != true {
-                        Text(incomeName).tag(true)
+                        Label(incomeName, systemImage: "tray.and.arrow.down").tag(true)
+                            .foregroundStyle(.green)
                     }
                     
-                    Text(expenseName).tag(false)
+                    Label(expenseName, systemImage: "tray.and.arrow.up").tag(false)
+                        .foregroundStyle(.red)
                 }
                 .pickerStyle(.palette)
             }

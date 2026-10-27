@@ -272,6 +272,7 @@ struct FinanceKitSetupView: View {
     }
 
     private func finishMapping(_ accounts: [FinanceKitAccountSnapshot]) {
+        FinanceKitClient.enableBackgroundDelivery()
         lastSynced = .now
         if isMappingNewAccounts {
             isMappingNewAccounts = false
@@ -297,6 +298,7 @@ struct FinanceKitSetupView: View {
         // Leaves already-imported transactions and accounts in place — only the
         // connection bookkeeping is removed.
         FinanceKitConfig.reset()
+        FinanceKitClient.disableBackgroundDelivery()
         lastAccounts = []
         errorMessage = nil
         lastSynced = nil

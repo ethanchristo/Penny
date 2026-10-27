@@ -99,7 +99,7 @@ struct RecurringInsightsView: View {
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        AdaptiveSplitLayout {
             if items.isEmpty {
                 ContentUnavailableView(
                     "No Recurring Transactions",
@@ -129,7 +129,7 @@ struct RecurringInsightsView: View {
                     selectionChip
                 }
             }
-
+        } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
                 transactions: displayedTransactions,
@@ -155,6 +155,14 @@ struct RecurringInsightsView: View {
         .navigationTitle("Recurring")
         .navigationSubtitle(windowTimeRange.rawValue)
         .navigationBarTitleDisplayMode(.inline)
+        .background {
+            LinearGradient(
+                colors: [InsightsOptions.recurring.color.opacity(0.35), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
         .toolbarVisibility(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -534,17 +542,15 @@ private struct RecurringCalendarChart: View {
 
 // MARK: - Mini chart for the insights grid
 
-/// A compact, decoration-only preview of the recurring calendar for the insights
-/// grid cell — the current month as a tiny weekday-aligned dot grid, stripped of
-/// day numbers and chrome so it reads as a miniature of the full calendar.
+/// A compact preview of the recurring calendar for the insights grid cell — the
+/// current month as a tiny weekday-aligned grid. Days with something recurring
+/// are washed in their category's color with a dot per distinct category (like
+/// the full calendar), today is ringed, and past days are dimmed.
 struct MiniRecurringChart: View {
-    let transactions: [Transaction]
+    let items: [RecurringItem]
+    var tint: Color = .accentColor
 
     private var calendar: Calendar { Calendar.current }
-
-    private var items: [RecurringItem] {
-        recurringItems(from: transactions)
-    }
 
     private var firstOfMonth: Date {
         let components = calendar.dateComponents([.year, .month], from: .now)
@@ -561,30 +567,66 @@ struct MiniRecurringChart: View {
         return (weekday - calendar.firstWeekday + 7) % 7
     }
 
-    /// The first recurring category's color for a day, or nil when nothing recurs.
-    private func dotColor(for day: Date) -> Color? {
+    /// Weekday headers rotated to honor the user's `firstWeekday`.
+    private var weekdaySymbols: [String] {
+        let symbols = calendar.veryShortStandaloneWeekdaySymbols
+        let shift = calendar.firstWeekday - 1
+        return Array(symbols[shift...] + symbols[..<shift])
+    }
+
+    /// One color per distinct category/fund recurring on `day`, soonest-first —
+    /// the same grouping the full calendar's dots use.
+    private func dotColors(for day: Date) -> [Color] {
         let start = calendar.startOfDay(for: day)
         let end = start.endOfDay
-        return items.first { occurrenceCount(of: $0.transaction, from: start, to: end, calendar: calendar) > 0 }?.color
+        var seen = Set<String>()
+        var colors: [Color] = []
+        for item in items where occurrenceCount(of: item.transaction, from: start, to: end, calendar: calendar) > 0 {
+            if seen.insert(item.dotKey).inserted {
+                colors.append(item.color)
+            }
+        }
+        return colors
     }
 
     var body: some View {
+        let today = calendar.startOfDay(for: .now)
+
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
+            ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                Text(symbol)
+                    .font(.caption2.bold())
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+            }
+
             ForEach(0..<leadingBlanks, id: \.self) { _ in
-                Color.clear.frame(height: 28)
+                Color.clear.frame(height: 16)
             }
 
             ForEach(days, id: \.self) { day in
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.gray.opacity(0.12))
-                    .frame(height: 28)
+                let colors = dotColors(for: day)
+                let isToday = calendar.isDate(day, inSameDayAs: today)
+
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(colors.first.map { $0.opacity(0.25) } ?? Color.gray.opacity(0.12))
+                    .frame(height: 16)
                     .overlay {
-                        if let color = dotColor(for: day) {
-                            Circle()
-                                .fill(color)
-                                .frame(width: 8, height: 8)
+                        HStack(spacing: 2) {
+                            ForEach(Array(colors.prefix(3).enumerated()), id: \.offset) { _, color in
+                                Circle()
+                                    .fill(color)
+                                    .frame(width: 5, height: 5)
+                            }
                         }
                     }
+                    .overlay {
+                        if isToday {
+                            RoundedRectangle(cornerRadius: 5)
+                                .strokeBorder(tint, lineWidth: 1.5)
+                        }
+                    }
+                    .opacity(day < today ? 0.5 : 1)
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)

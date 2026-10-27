@@ -91,7 +91,7 @@ struct BudgetInsightsView: View {
         // figure and the transaction list below derive from this same slice.
         let pageTransactions = transactions(for: dateOffset ?? 0)
 
-        ScrollView(.vertical, showsIndicators: false) {
+        AdaptiveSplitLayout(showsDivider: true) {
             BudgetHeaderView(
                 dateOffset: $dateOffset,
                 spent: spent(for: dateOffset ?? 0, in: pageTransactions),
@@ -101,13 +101,7 @@ struct BudgetInsightsView: View {
                 symbol: symbol ?? ""
             )
             .padding(.top, 20)
-            
-            SquigglyLine(wavelength: 16, amplitude: 2)
-                .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .frame(height: 12) // Height should accommodate the amplitude
-                .padding(.horizontal)
-                .padding(.top, 8)
-
+        } transactions: {
             CategoryTransactionPageView(
                 transactionsForPage: pageTransactions,
                 searchText: searchText,

@@ -205,16 +205,16 @@ struct TransactionFilteredView: View {
             
             if hasContent {
                 LazyVStack(spacing: 15) {
+                    if !hideUpcoming {
+                        upcomingSection(from: sections)
+                    }
+                    
                     if !hideRecent {
                         recentSection(from: sections)
                     }
                     
                     if !hideRecurrence {
                         recurringSection(from: sections)
-                    }
-                    
-                    if !hideUpcoming {
-                        upcomingSection(from: sections)
                     }
                     
                     if !hideAllTx {
@@ -267,6 +267,50 @@ struct TransactionFilteredView: View {
             }
         } message: {
             Text("This can't be undone.")
+        }
+    }
+    
+    @ViewBuilder
+    private func upcomingSection(from sections: DisplaySections) -> some View {
+        if !sections.upcoming.isEmpty {
+            HStack {
+                Text("Upcoming")
+                                
+                Text("(\(sections.upcoming.count))")
+                    .foregroundStyle(Color.secondary)
+                
+                Spacer()
+
+                Image(systemName: "chevron.up")
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(showUpcomingSection ? 180 : 0))
+            }
+            .font(.headline)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 30)
+            .padding(.top, 20)
+            .onTapGesture { showUpcomingSection.toggle() }
+            
+            if showUpcomingSection {
+                ForEach(sections.upcoming) { transaction in
+                    Button {
+                        haptics += 1
+                        editingTransaction = transaction
+                    } label : {
+                        TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: true, grouping: grouping)
+                    }
+                    .matchedTransitionSource(id: transaction.id, in: namespace)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            pendingDeletion = transaction
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .transition(.blurReplace)
+                }
+                .padding(.horizontal)
+            }
         }
     }
     
@@ -370,47 +414,6 @@ struct TransactionFilteredView: View {
                         }
                     }
                     .transition(.blurReplace)
-                }
-                .padding(.horizontal)
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func upcomingSection(from sections: DisplaySections) -> some View {
-        if !sections.upcoming.isEmpty {
-            HStack {
-                Text("Upcoming")
-                
-                Spacer()
-                
-                Text("(\(sections.upcoming.count))")
-                    .foregroundStyle(Color.secondary)
-                
-//                Image(systemName: "chevron.up")
-//                    .foregroundStyle(.secondary)
-//                    .rotationEffect(.degrees(showUpcomingSection ? 180 : 0))
-            }
-            .font(.headline)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 30)
-            .padding(.top, 20)
-            .onTapGesture { showUpcomingSection.toggle() }
-            
-            ForEach(sections.upcoming) { transaction in
-                Button {
-                    haptics += 1
-                    editingTransaction = transaction
-                } label : {
-                    TransactionRowView(transaction: transaction, disableGrouping: disableDateGrouping, currency: currencyCode, upcoming: true, grouping: grouping)
-                }
-                .matchedTransitionSource(id: transaction.id, in: namespace)
-                .contextMenu {
-                    Button(role: .destructive) {
-                        pendingDeletion = transaction
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
                 }
                 .padding(.horizontal)
             }

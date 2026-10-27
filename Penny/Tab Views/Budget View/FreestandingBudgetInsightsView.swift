@@ -23,16 +23,10 @@ struct FreestandingBudgetInsightsView: View {
     let namespace: Namespace.ID
 
     var body: some View {
-        ScrollView {
+        AdaptiveSplitLayout(showsDivider: true) {
             FreestandingBudgetChartView(budget: budget)
                 .padding(.top)
-
-            SquigglyLine(wavelength: 16, amplitude: 2)
-                .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .frame(height: 12)
-                .padding(.horizontal)
-                .padding(.top, 6)
-
+        } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
                 transactions: transactions,

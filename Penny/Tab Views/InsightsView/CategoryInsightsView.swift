@@ -38,13 +38,13 @@ struct CategoryInsightsView: View {
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        AdaptiveSplitLayout {
             CategoryPieChartView(
                 transactions: transactions,
                 categories: categories,
                 window: window
             )
-
+        } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
                 transactions: windowedTransactions,
@@ -61,6 +61,14 @@ struct CategoryInsightsView: View {
         .navigationTitle("Categories")
         .navigationSubtitle(windowTimeRange.rawValue)
         .navigationBarTitleDisplayMode(.inline)
+        .background {
+            LinearGradient(
+                colors: [.purple.opacity(0.35), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
         .toolbarVisibility(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -205,25 +213,13 @@ struct CategoryPieChartView: View {
 
                 VStack(spacing: 10) {
                     ForEach(slices) { slice in
-                        HStack(spacing: 10) {
-                            Text(slice.symbol)
-
-                            Text(slice.name)
-                                .lineLimit(1)
-
-                            Spacer()
-
-                            Text(percent(slice.amount))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            Text(amountTruncation(for: slice.amount, currencySymbol: currencySymbol))
-                                .font(.subheadline.bold())
-                                .contentTransition(.numericText())
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .glassEffect(.regular.tint(slice.color.opacity(0.25)), in: RoundedRectangle(cornerRadius: 18))
+                        InsightBreakdownRow(
+                            symbol: slice.symbol,
+                            name: slice.name,
+                            color: slice.color,
+                            share: total > 0 ? slice.amount / total : 0,
+                            amount: slice.amount
+                        )
                     }
                 }
                 .padding(.horizontal)
@@ -231,10 +227,5 @@ struct CategoryPieChartView: View {
             }
         }
         .padding(.top)
-    }
-
-    private func percent(_ amount: Double) -> String {
-        guard total > 0 else { return "0%" }
-        return (amount / total).formatted(.percent.precision(.fractionLength(0)))
     }
 }

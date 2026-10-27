@@ -83,3 +83,32 @@ struct CategoryQuery: EntityQuery {
         return categories.map { CategoryEntity(category: $0) }
     }
 }
+
+/// Lets the system ask Penny to rebuild Category entries in Spotlight (e.g. after the
+/// index is purged or restored).
+@available(iOS 27.0, macOS 27.0, visionOS 27.0, *)
+extension CategoryQuery: IndexedEntityQuery {
+    @MainActor
+    func reindexEntities(for identifiers: [UUID], indexDescription: CSSearchableIndexDescription) async throws {
+        let index = CSSearchableIndex(name: "PennyEntities")
+        let entities = try await entities(for: identifiers)
+
+        // Identifiers that no longer resolve were deleted — drop them from Spotlight.
+        let found = Set(entities.map(\.id))
+        let stale = identifiers.filter { !found.contains($0) }
+        if !stale.isEmpty {
+            try await index.deleteAppEntities(identifiedBy: stale, ofType: CategoryEntity.self)
+        }
+        try await index.indexAppEntities(entities)
+    }
+
+    @MainActor
+    func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
+        let index = CSSearchableIndex(name: "PennyEntities")
+        let context = SharedDatabase.shared.container.mainContext
+        let entities = try context.fetch(FetchDescriptor<Category>()).map { CategoryEntity(category: $0) }
+
+        try await index.deleteAppEntities(ofType: CategoryEntity.self)
+        try await index.indexAppEntities(entities)
+    }
+}

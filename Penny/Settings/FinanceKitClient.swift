@@ -93,6 +93,21 @@ struct FinanceKitClient {
         return map(status)
     }
 
+    /// Data types whose changes wake the PennyFinanceMonitor extension.
+    private static let backgroundTypes: [FinanceStore.BackgroundDataType] = [
+        .transactions, .accountBalances, .accounts
+    ]
+
+    /// Asks FinanceKit to wake the PennyFinanceMonitor extension (at most hourly)
+    /// when Wallet data changes. Safe to call repeatedly.
+    static func enableBackgroundDelivery() {
+        FinanceStore.shared.enableBackgroundDelivery(for: backgroundTypes, frequency: .hourly)
+    }
+
+    static func disableBackgroundDelivery() {
+        FinanceStore.shared.disableAllBackgroundDelivery()
+    }
+
     private static func map(_ status: FinanceKit.AuthorizationStatus) -> FinanceKitAuthState {
         switch status {
         case .authorized: return .authorized

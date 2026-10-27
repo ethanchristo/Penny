@@ -94,25 +94,9 @@ struct HomeView: View {
     }
 
     var body: some View {
-        Group {
-            if horizontalSizeClass == .compact {
-                NavigationStack {
-                    content
-                        .background {
-                            LinearGradient(
-                                colors: [backgroundColor.opacity(0.7), .clear, .clear],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .ignoresSafeArea()
-                        }
-                }
-            } else {
-                // Regular width: ContentView hosts this alongside TransactionView in a
-                // single shared NavigationStack and draws the background gradient itself.
-                content
-            }
-        }
+        // ContentView hosts this in a single NavigationStack (alongside TransactionView
+        // in regular width) and draws the background gradient itself.
+        content
         .task(id: statsTaskID) {
             // Keep the payday-anchored window in sync with the latest Payroll
             // transaction (when tracking is on) before computing, so the pass below
@@ -149,8 +133,8 @@ struct HomeView: View {
             if !scriptSecret.isEmpty {
                 await silentAutoFetch()
             }
-            await silentSimpleFINSync()
-            await silentFinanceKitSync()
+            await BankSync.syncSimpleFIN(in: modelContext)
+            await BankSync.syncFinanceKit(in: modelContext)
         }
         .sheet(isPresented: $showAddTransaction) {
             NavigationStack {
@@ -175,7 +159,7 @@ struct HomeView: View {
 
     /// The scrolling overview itself, without a navigation container.
     private var content: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             NetTotalView(
                 selectedTimeRange: $selectedTimeRange,
                 modelContext: modelContext,
@@ -201,7 +185,7 @@ struct HomeView: View {
             .padding(.horizontal, 24)
             .padding(.top, 16)
             
-            ScrollView(.horizontal) {
+            ScrollView(.horizontal, showsIndicators: false) {
                 SummaryView(
                     currencyCode: currencyCode,
                     transactions: transactions,
@@ -215,7 +199,7 @@ struct HomeView: View {
                 editingTransaction: $editingTransaction,
                 transactions: windowedTransactions,
                 namespace: namespace,
-                hideRecent: true,
+                hideRecent: false,
                 hideRecurrence: true,
                 hideUpcoming: false,
                 hideAllTx: true,
@@ -225,32 +209,32 @@ struct HomeView: View {
                 filterIsIncome: filterIsIncome
             )
             
-            if horizontalSizeClass == .compact {
-                SquigglyLine(wavelength: 16, amplitude: 2)
-                    .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .frame(height: 12) // Height should accommodate the amplitude
-                    .padding(.horizontal)
-                    .padding(.top, 16)
-                
-                TransactionFilteredView(
-                    editingTransaction: $editingTransaction,
-                    transactions: windowedTransactions,
-                    namespace: namespace,
-                    hideRecent: false,
-                    hideRecurrence: true,
-                    hideUpcoming: true,
-                    hideAllTx: true,
-                    searchString: searchText,
-                    filterAccount: filterAccount,
-                    filterCategory: filterCategory,
-                    filterIsIncome: filterIsIncome
-                )
-            }
+//            if horizontalSizeClass == .compact {
+//                SquigglyLine(wavelength: 16, amplitude: 2)
+//                    .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+//                    .frame(height: 12) // Height should accommodate the amplitude
+//                    .padding(.horizontal)
+//                    .padding(.top, 16)
+//                
+//                TransactionFilteredView(
+//                    editingTransaction: $editingTransaction,
+//                    transactions: windowedTransactions,
+//                    namespace: namespace,
+//                    hideRecent: false,
+//                    hideRecurrence: true,
+//                    hideUpcoming: true,
+//                    hideAllTx: true,
+//                    searchString: searchText,
+//                    filterAccount: filterAccount,
+//                    filterCategory: filterCategory,
+//                    filterIsIncome: filterIsIncome
+//                )
+//            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity) // DIAGNOSTIC
         .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
         .navigationTitle("Overview")
-        .toolbarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .phone ? .inlineLarge : .large)
+        .toolbarTitleDisplayMode(horizontalSizeClass == .compact ? .inlineLarge : .large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -347,74 +331,6 @@ struct HomeView: View {
             await silentSaveToDatabase(dtos: importedTransactions)
         } catch {
             // Silent failure on background fetch
-        }
-    }
-
-    /// Background SimpleFIN sync on foreground: pulls new transactions since the
-    /// connection date and imports them (dedup + categorisation handled by
-    /// `SimpleFINImporter`). Throttled to at most once every few hours because
-    /// the Bridge only refreshes about once a day and heavy polling can disable
-    /// the connection. No-ops if SimpleFIN isn't connected.
-    private func silentSimpleFINSync() async {
-        guard let accessURL = SimpleFINStore.loadAccessURL() else { return }
-
-        // A credential without local bookkeeping means iCloud Keychain brought
-        // the connection over from another device; rebuild it from the synced
-        // data so syncing resumes without a trip through Settings.
-        guard SimpleFINConfig.isConfigured
-                || SimpleFINConfig.adoptSyncedConnection(in: modelContext)
-        else { return }
-
-        let throttle: TimeInterval = 6 * 60 * 60
-        if let last = SimpleFINConfig.lastSyncDate,
-           Date.now.timeIntervalSince(last) < throttle { return }
-
-        // Fetch back to the earliest per-account cutoff so transactions that
-        // were pending at setup and have since posted (possibly with a date
-        // before the connection date) are returned — but never reach past the
-        // Bridge's 90-day window.
-        let earliest = Calendar.current.date(byAdding: .day, value: -89, to: .now)
-        let cutoffFloor = SimpleFINConfig.accountCutoffs.values.min()
-            ?? SimpleFINConfig.connectedDate
-            ?? earliest ?? .now
-        let startDate = max(cutoffFloor, earliest ?? .distantPast)
-
-        do {
-            let result = try await SimpleFINClient.fetchAccounts(accessURL: accessURL,
-                                                                 startDate: startDate)
-            await SimpleFINImporter.importNewTransactions(result.accounts, into: modelContext)
-            SimpleFINConfig.lastSyncDate = .now
-        } catch {
-            // Silent failure on background sync — a failed fetch doesn't mean a dead connection.
-        }
-    }
-
-    /// FinanceKit sync on foreground: pulls new Wallet transactions since each
-    /// mapped account's cutoff and imports them (dedup + categorisation handled by
-    /// `FinanceKitImporter`). On-device data, so — unlike SimpleFIN — there's no API
-    /// limit to throttle against; it runs on every open. No-ops if not connected.
-    private func silentFinanceKitSync() async {
-        if !FinanceKitConfig.isConfigured {
-            // Bookkeeping missing but the mapping already synced (new device or
-            // reinstall) — rebuild it so syncing resumes without a trip through
-            // Settings. Only once Wallet access is granted, so the connection is
-            // never marked live while authorization is denied.
-            guard await FinanceKitClient.authorizationState() == .authorized,
-                  FinanceKitConfig.adoptSyncedConnection(in: modelContext)
-            else { return }
-        }
-
-        let floor = FinanceKitConfig.accountCutoffs.values.min()
-            ?? FinanceKitConfig.connectedDate
-
-        do {
-            let accounts = try await FinanceKitClient.fetchAccounts(since: floor)
-            await FinanceKitImporter.importNewTransactions(accounts,
-                                                           into: modelContext,
-                                                           categorize: financeKitHybridCategorize)
-            FinanceKitConfig.lastSyncDate = .now
-        } catch {
-            // Silent failure on foreground sync.
         }
     }
 
@@ -783,7 +699,7 @@ struct CategorySpendingView: View {
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        AdaptiveSplitLayout(showsDivider: true) {
             VStack(spacing: 4) {
                 Text(category.symbol)
                     .font(.system(size: 44))
@@ -799,13 +715,7 @@ struct CategorySpendingView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 20)
-
-            SquigglyLine(wavelength: 16, amplitude: 2)
-                .stroke(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .frame(height: 12)
-                .padding(.horizontal)
-                .padding(.top, 8)
-
+        } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
                 transactions: transactionsInRange(start: window.start, end: window.end, transactions: transactions),

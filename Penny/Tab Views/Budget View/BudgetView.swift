@@ -161,6 +161,7 @@ struct BudgetView: View {
                                 LazyVGrid(columns: columns, spacing: 16) {
                                     ForEach(endedBudgets) { budget in
                                         freestandingLink(for: budget)
+                                            .transition(.blurReplace)
                                     }
                                 }
                                 .padding(.horizontal, 10)
@@ -179,11 +180,10 @@ struct BudgetView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 20)
                             .padding(.top, 20)
-                            .onTapGesture {
-                                withAnimation(.snappy) { showEndedBudgets.toggle() }
-                            }
+                            .onTapGesture { showEndedBudgets.toggle() }
                             .sensoryFeedback(.impact(weight: .light), trigger: showEndedBudgets)
                         }
+                        .animation(.snappy, value: showEndedBudgets)
                     }
                 }
             }

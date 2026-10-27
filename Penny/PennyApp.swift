@@ -16,6 +16,8 @@ struct PennyApp: App {
     @State private var overallBudget = OverallBudget()
     @State private var router = AppRouter.shared
 
+    @Environment(\.scenePhase) private var scenePhase
+
     /// Builds a rounded-design version of the font in the given title attributes,
     /// falling back to the system's default title sizes.
     private func roundedFont(for attributes: [NSAttributedString.Key: Any]) -> UIFont? {
@@ -50,8 +52,24 @@ struct PennyApp: App {
                 // Refresh the payday-anchored window from the latest Payroll transaction
                 // so the widget/background case is current even before Home recomputes.
                 syncPayrollPayPeriodAnchor()
+                // Re-arm Wallet change delivery for the PennyFinanceMonitor
+                // extension; FinanceKit keeps it until explicitly disabled.
+                if FinanceKitConfig.isConfigured {
+                    FinanceKitClient.enableBackgroundDelivery()
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .background {
+                    BankSync.scheduleBackgroundRefresh()
+                }
             }
         }
         .modelContainer(SharedDatabase.shared.container)
+        // Woken by BGTaskScheduler while Penny is suspended. The next request is
+        // submitted first so the chain continues even if this run is cut short.
+        .backgroundTask(.appRefresh(BankSync.refreshTaskIdentifier)) {
+            BankSync.scheduleBackgroundRefresh()
+            await BankSync.syncAll(in: SharedDatabase.shared.container.mainContext)
+        }
     }
 }

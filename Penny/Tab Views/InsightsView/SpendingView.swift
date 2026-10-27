@@ -47,7 +47,7 @@ struct SpendingView: View {
     }
     
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        AdaptiveSplitLayout {
             ScrollView(.horizontal, showsIndicators: false) {
                 SpendingOverview(
                     transactions: transactions,
@@ -66,7 +66,7 @@ struct SpendingView: View {
                 timeRange: windowTimeRange,
                 window: window
             )
-
+        } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
                 transactions: filteredTransactions,
@@ -86,6 +86,14 @@ struct SpendingView: View {
         .navigationSubtitle(windowTimeRange.rawValue)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .tabBar)
+        .background {
+            LinearGradient(
+                colors: [InsightsOptions.spending.color.opacity(0.35), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -374,29 +382,51 @@ struct SpendingChartView: View {
                 // domain stays identical to the line layer (which uses the full
                 // data set) — otherwise the two stacked charts fall out of
                 // alignment. Just hide the mark instead of removing it.
-                .foregroundStyle(pointColor(point: point))
+                .symbol {
+                    Circle()
+                        .fill(pointColor(point: point))
+                        .frame(width: 8, height: 8)
+                        .overlay(Circle().strokeBorder(.white, lineWidth: 1.5))
+                }
                 .opacity(point.amount == 0 ? 0 : 1)
             }
         }
-        .modifier(ChartXAxisStyle(timeRange: timeRange))
+        .modifier(ChartAxisStyle(timeRange: timeRange))
         .animation(.smooth, value: points)
     }
 
-    /// The connecting line only, masked to `lineReveal` (left-to-right draw-on)
-    /// and dimmed by `lineOpacity` while the points are in motion.
+    /// The connecting line and its gradient fill, masked to `lineReveal`
+    /// (left-to-right draw-on) and dimmed by `lineOpacity` while the points are
+    /// in motion — so the fill draws on and fades together with its line.
     private var lineLayer: some View {
         Chart {
             ForEach(lineData, id: \.id) { point in
+                AreaMark(
+                    x: .value("Date", point.label),
+                    y: .value("Amount", point.amount),
+                    series: .value("Type", point.type.rawValue),
+                    stacking: .unstacked
+                )
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [pointColor(point: point).opacity(0.3), pointColor(point: point).opacity(0)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .interpolationMethod(.catmullRom)
+
                 LineMark(
                     x: .value("Date", point.label),
                     y: .value("Amount", point.amount),
                     series: .value("Type", point.type.rawValue)
                 )
                 .foregroundStyle(pointColor(point: point))
+                .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                 .interpolationMethod(.catmullRom)
             }
         }
-        .modifier(ChartXAxisStyle(timeRange: timeRange))
+        .modifier(ChartAxisStyle(timeRange: timeRange))
         .opacity(lineOpacity)
         .mask(alignment: .leading) {
             GeometryReader { geo in
@@ -446,21 +476,37 @@ struct SpendingChartView: View {
     }
 }
 
-/// Shared x-axis configuration for the insights charts. Kept separate from
+/// Shared axis configuration for the insights charts. Kept separate from
 /// `ChartContainer` so it can be applied directly to each `Chart` — the layered
 /// point/line charts both need identical axes to stay aligned.
-private struct ChartXAxisStyle: ViewModifier {
+private struct ChartAxisStyle: ViewModifier {
+    @AppStorage("currency_symbol", store: .group) private var currencySymbol: String = "$"
+
     let timeRange: HomeTimeRange
+
+    private var gridStroke: StrokeStyle {
+        StrokeStyle(lineWidth: 0.5, dash: [3, 4])
+    }
 
     func body(content: Content) -> some View {
         content
             .chartXAxis {
                 if timeRange == .monthly {
-                    AxisMarks { AxisGridLine() }
+                    AxisMarks { AxisGridLine(stroke: gridStroke) }
                 } else {
                     AxisMarks {
-                        AxisGridLine()
+                        AxisGridLine(stroke: gridStroke)
                         AxisValueLabel()
+                    }
+                }
+            }
+            .chartYAxis {
+                AxisMarks(values: .automatic(desiredCount: 4)) { value in
+                    AxisGridLine(stroke: gridStroke)
+                    AxisValueLabel {
+                        if let amount = value.as(Double.self) {
+                            Text("\(currencySymbol)\(amount.formatted(.number.notation(.compactName)))")
+                        }
                     }
                 }
             }
@@ -475,7 +521,8 @@ private struct ChartContainer: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(15)
-            .frame(height: 250)
+            .padding(.top, 30)
+            .frame(height: 280)
             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 26))
             // Pin the label to the card's top-leading padding band so it sits
             // clear of the y-axis value labels and the rounded glass corner,

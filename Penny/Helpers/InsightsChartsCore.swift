@@ -271,6 +271,8 @@ struct SankeyNode: Identifiable, Hashable {
     let label: String
     let color: Color
     let column: Int
+    /// When set, the diagram labels the node with just this symbol.
+    var symbol: String? = nil
 }
 
 /// A directed flow between two nodes, sized by `value`. Rendered as a curved
@@ -288,11 +290,6 @@ struct SankeyLink: Identifiable, Hashable {
 /// rendering. Because it draws with `Category.color` and the app's own palette,
 /// it matches the rest of Insights — which a web-view Sankey couldn't.
 struct SankeyDiagram: View {
-    @AppStorage("currency_symbol", store: .group) private var currencySymbol: String = "$"
-
-    /// The node the user is pressing on, for the inspect tooltip.
-    @State private var hoveredNodeID: String?
-
     let nodes: [SankeyNode]
     let links: [SankeyLink]
 
@@ -316,7 +313,7 @@ struct SankeyDiagram: View {
                 inset: labelInset
             )
 
-            let content = ZStack(alignment: .topLeading) {
+            ZStack(alignment: .topLeading) {
                 Canvas { context, _ in
                     // Ribbons first, so the solid node bars sit on top of them.
                     for ribbon in layout.ribbons {
@@ -350,75 +347,14 @@ struct SankeyDiagram: View {
                         }
                     }
                 }
-
-                if let hoveredNodeID, let placed = layout.nodes.first(where: { $0.node.id == hoveredNodeID }) {
-                    tooltip(for: placed, in: geo.size)
-                }
-            }
-            .contentShape(.rect)
-            .animation(.easeOut(duration: 0.12), value: hoveredNodeID)
-
-            // Press-and-hold, then drag to inspect a category's amount. Gated to
-            // the full diagram so the decorative mini (inside a NavigationLink)
-            // keeps its tap. The long-press activation means a normal scroll or
-            // tap is never captured.
-            if showLabels {
-                content.gesture(
-                    LongPressGesture(minimumDuration: 0.15)
-                        .sequenced(before: DragGesture(minimumDistance: 0))
-                        .onChanged { value in
-                            if case .second(true, let drag?) = value {
-                                hoveredNodeID = node(at: drag.location, in: layout)?.node.id
-                            }
-                        }
-                        .onEnded { _ in hoveredNodeID = nil }
-                )
-            } else {
-                content
             }
         }
-    }
-
-    /// The node whose bar contains `point`, with a generous horizontal margin so
-    /// the thin bars are easy to land on.
-    private func node(at point: CGPoint, in layout: SankeyLayout) -> SankeyLayout.PlacedNode? {
-        layout.nodes.first { $0.rect.insetBy(dx: -18, dy: -2).contains(point) }
-    }
-
-    /// A floating label with the pressed node's category and amount, clamped to
-    /// stay on screen and sitting just above the bar.
-    private func tooltip(for placed: SankeyLayout.PlacedNode, in size: CGSize) -> some View {
-        let x = min(max(placed.rect.midX, 70), size.width - 70)
-        let y = max(28, placed.rect.minY - 10)
-
-        return VStack(spacing: 2) {
-            Text(placed.node.label)
-                .font(.caption2.bold())
-                .lineLimit(1)
-            Text(amountTruncation(for: placed.value, currencySymbol: currencySymbol))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(placed.node.color.opacity(0.6), lineWidth: 1)
-        )
-        .shadow(radius: 4)
-        .fixedSize()
-        .position(x: x, y: y)
-        .allowsHitTesting(false)
-        .transition(.opacity)
     }
 
     @ViewBuilder
     private func label(for placed: SankeyLayout.PlacedNode, size: CGSize) -> some View {
-        // Only the category name is shown at rest — the amount is revealed by
-        // pressing and holding over the node (see the inspect tooltip).
         let content = VStack(alignment: placed.node.column == 0 ? .trailing : .leading, spacing: 0) {
-            Text(placed.node.label)
+            Text(placed.node.symbol ?? placed.node.label)
                 .font(.caption2)
                 .lineLimit(1)
         }
@@ -618,7 +554,7 @@ func cashFlowSankeyData(
                                         start: window.start, end: window.end))
         if amount > 0 {
             let id = "in-\(category.name)"
-            nodes.append(SankeyNode(id: id, label: "\(category.symbol) \(category.name)", color: category.color, column: 0))
+            nodes.append(SankeyNode(id: id, label: "\(category.symbol) \(category.name)", color: category.color, column: 0, symbol: category.symbol))
             links.append(SankeyLink(source: id, target: centerID, value: amount))
             totalIncome += amount
         }
@@ -638,7 +574,7 @@ func cashFlowSankeyData(
                                         start: window.start, end: window.end))
         if amount > 0 {
             let id = "ex-\(category.name)"
-            nodes.append(SankeyNode(id: id, label: "\(category.symbol) \(category.name)", color: category.color, column: 2))
+            nodes.append(SankeyNode(id: id, label: "\(category.symbol) \(category.name)", color: category.color, column: 2, symbol: category.symbol))
             links.append(SankeyLink(source: centerID, target: id, value: amount))
             totalExpense += amount
         }
