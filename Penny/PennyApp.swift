@@ -68,8 +68,15 @@ struct PennyApp: App {
         // Woken by BGTaskScheduler while Penny is suspended. The next request is
         // submitted first so the chain continues even if this run is cut short.
         .backgroundTask(.appRefresh(BankSync.refreshTaskIdentifier)) {
-            BankSync.scheduleBackgroundRefresh()
-            await BankSync.syncAll(in: SharedDatabase.shared.container.mainContext)
+            await Self.runBackgroundSync()
         }
+    }
+
+    /// Runs the background bank sync entirely on the main actor, so the
+    /// non-Sendable main `ModelContext` never leaves its isolation domain.
+    @MainActor
+    private static func runBackgroundSync() async {
+        BankSync.scheduleBackgroundRefresh()
+        await BankSync.syncAll(in: SharedDatabase.shared.container.mainContext)
     }
 }
