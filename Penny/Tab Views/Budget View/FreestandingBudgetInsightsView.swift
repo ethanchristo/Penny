@@ -29,6 +29,7 @@ struct FreestandingBudgetInsightsView: View {
         } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
+                showRecurringSection: false,
                 transactions: transactions,
                 namespace: namespace,
                 hideRecent: true,

@@ -318,8 +318,8 @@ private struct SpendingTile: View {
             }
         } footer: {
             HStack(spacing: 8) {
-                TileChip(color: Color(.systemGreen), title: "In", amount: income)
-                TileChip(color: Color(.systemRed), title: "Out", amount: expenses)
+                TileChip(color: Color(.systemGreen), title: "INC", amount: income)
+                TileChip(color: Color(.systemRed), title: "EXP", amount: expenses)
                 Spacer(minLength: 0)
             }
         }
@@ -521,8 +521,8 @@ private struct CashFlowTile: View {
             }
         } footer: {
             HStack(spacing: 8) {
-                TileChip(color: Color(.systemGreen), title: "In", amount: totalIn)
-                TileChip(color: Color(.systemRed), title: "Out", amount: totalOut)
+                TileChip(color: Color(.systemGreen), title: "INC", amount: totalIn)
+                TileChip(color: Color(.systemRed), title: "EXP", amount: totalOut)
                 Spacer(minLength: 0)
             }
         }

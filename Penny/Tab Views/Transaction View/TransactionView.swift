@@ -93,6 +93,7 @@ struct TransactionView: View {
         ScrollView {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
+                showRecurringSection: false,
                 transactions: dynamicallySortedTransactions,
                 namespace: namespace,
                 hideRecent: true,

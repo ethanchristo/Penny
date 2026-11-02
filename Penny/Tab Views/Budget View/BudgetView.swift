@@ -139,7 +139,7 @@ struct BudgetView: View {
                         } header: {
                             sectionHeader("Recurring", count: recurringCount)
                         }
-                        .padding(.top, 20)
+                        .padding(.top, 4)
                     }
 
                     if !nonRecurringOngoingBudgets.isEmpty {
@@ -152,6 +152,8 @@ struct BudgetView: View {
                             .padding(.horizontal, 10)
                         } header: {
                             sectionHeader("Non-Recurring", count: nonRecurringOngoingBudgets.count)
+                                .padding(.horizontal, 12)
+
                         }
                     }
 
@@ -161,10 +163,11 @@ struct BudgetView: View {
                                 LazyVGrid(columns: columns, spacing: 16) {
                                     ForEach(endedBudgets) { budget in
                                         freestandingLink(for: budget)
-                                            .transition(.blurReplace)
                                     }
                                 }
                                 .padding(.horizontal, 10)
+                                // On the grid itself: lazy children aren't reliably
+                                // transitioned when their parent is inserted/removed.
                             }
                         } header: {
                             HStack {
@@ -183,6 +186,8 @@ struct BudgetView: View {
                             .onTapGesture { showEndedBudgets.toggle() }
                             .sensoryFeedback(.impact(weight: .light), trigger: showEndedBudgets)
                         }
+                        // Value-based rather than `withAnimation`: the @AppStorage write
+                        // can land outside the tap's animation transaction.
                         .animation(.snappy, value: showEndedBudgets)
                     }
                 }
@@ -288,7 +293,7 @@ struct BudgetView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .padding(.top, 20)
     }
 
@@ -362,6 +367,7 @@ struct BudgetView: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+        .transition(.blurReplace)
     }
 
     @State private var editingBudgetSheet: Budget?

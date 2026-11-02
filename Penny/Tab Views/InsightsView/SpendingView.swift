@@ -69,6 +69,7 @@ struct SpendingView: View {
         } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
+                showRecurringSection: false,
                 transactions: filteredTransactions,
                 namespace: namespace,
                 hideRecent: true,

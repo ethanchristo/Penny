@@ -182,21 +182,25 @@ struct HomeView: View {
                 Spacer()
             }
             .font(.headline)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 28)
             .padding(.top, 16)
             
             ScrollView(.horizontal, showsIndicators: false) {
                 SummaryView(
                     currencyCode: currencyCode,
                     transactions: transactions,
-                    selectedTimeRange: selectedTimeRange
+                    selectedTimeRange: selectedTimeRange,
+                    namespace: namespace
                 )
             }
-            .scrollClipDisabled()
+//            .scrollClipDisabled()
             .padding(.horizontal, 24)
+            .padding(.top, 4)
+            .scrollEdgeEffectStyle(.soft, for: [.leading, .trailing])
             
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
+                showRecurringSection: false,
                 transactions: windowedTransactions,
                 namespace: namespace,
                 hideRecent: false,
@@ -718,6 +722,7 @@ struct CategorySpendingView: View {
         } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
+                showRecurringSection: true,
                 transactions: transactionsInRange(start: window.start, end: window.end, transactions: transactions),
                 namespace: namespace,
                 hideRecent: true,

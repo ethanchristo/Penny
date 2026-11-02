@@ -82,14 +82,22 @@ enum FinanceKitAuthState: Sendable {
 /// authorization is managed by the system.
 struct FinanceKitClient {
 
+    /// False on platforms without Wallet financial data (e.g. Mac). Touching
+    /// `FinanceStore.shared` there is a fatal error, so every entry point checks this first.
+    static var isAvailable: Bool {
+        FinanceStore.isDataAvailable(.financialData)
+    }
+
     static func authorizationState() async -> FinanceKitAuthState {
-        guard let status = try? await FinanceStore.shared.authorizationStatus() else { return .denied }
+        guard isAvailable,
+              let status = try? await FinanceStore.shared.authorizationStatus() else { return .denied }
         return map(status)
     }
 
     /// Prompts for access if needed (safe to call repeatedly).
     static func requestAuthorization() async -> FinanceKitAuthState {
-        guard let status = try? await FinanceStore.shared.requestAuthorization() else { return .denied }
+        guard isAvailable,
+              let status = try? await FinanceStore.shared.requestAuthorization() else { return .denied }
         return map(status)
     }
 
@@ -101,10 +109,12 @@ struct FinanceKitClient {
     /// Asks FinanceKit to wake the PennyFinanceMonitor extension (at most hourly)
     /// when Wallet data changes. Safe to call repeatedly.
     static func enableBackgroundDelivery() {
+        guard isAvailable else { return }
         FinanceStore.shared.enableBackgroundDelivery(for: backgroundTypes, frequency: .hourly)
     }
 
     static func disableBackgroundDelivery() {
+        guard isAvailable else { return }
         FinanceStore.shared.disableAllBackgroundDelivery()
     }
 
@@ -120,6 +130,7 @@ struct FinanceKitClient {
     /// Fetches every account with its live balance and the transactions posted
     /// after `since` (nil ⇒ a 90-day lookback used for first-connection mapping).
     static func fetchAccounts(since: Date? = nil) async throws -> [FinanceKitAccountSnapshot] {
+        guard isAvailable else { return [] }
         let store = FinanceStore.shared
         let cutoff = since ?? Calendar.current.date(byAdding: .day, value: -90, to: .now) ?? .distantPast
 

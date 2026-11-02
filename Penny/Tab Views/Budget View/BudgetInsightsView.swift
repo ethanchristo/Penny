@@ -392,6 +392,7 @@ struct CategoryTransactionPageView: View {
     var body: some View {
         TransactionFilteredView(
             editingTransaction: $editingTransaction,
+            showRecurringSection: false,
             transactions: transactionsForPage,
             namespace: namespace,
             hideRecent: true,

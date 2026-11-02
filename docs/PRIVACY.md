@@ -1,6 +1,6 @@
 # Privacy Policy for Penny
 
-**Last updated: August 2, 2026**
+**Last updated: November 1, 2026**
 
 Penny ("the app") is a personal finance app developed by Ethan Christo. This Privacy Policy explains what information the app handles, how it is used, and the choices available to you.
 
@@ -14,15 +14,15 @@ Penny ("the app") is a personal finance app developed by Ethan Christo. This Pri
 
 The following information is created and stored **on your device** (and, if you enable it, in your own private iCloud account):
 
-- **Financial data you enter or import** — transactions, amounts, merchant names, notes, account names and balances, budgets, savings funds, and categories.
+- **Financial data you enter or import** — transactions, amounts, merchant names, notes, account names and balances, budgets, housing payments, and categories.
 - **App preferences** — such as your chosen currency, theme, time ranges, and thresholds.
-- **Connection credentials** — if you connect a bank via SimpleFIN, the access credential is stored securely in the iOS Keychain on your device.
+- **Connection credentials** — if you connect a bank via SimpleFIN, the access credential is stored securely in the iOS Keychain on your device. If you have iCloud Keychain turned on, Apple may sync this credential across your own devices; it is protected by Apple and is not accessible to the developer.
 
 ---
 
 ## 2. How Your Information Is Used
 
-Your information is used solely to provide the app's features on your device: displaying your transactions, calculating budgets and net totals, tracking savings goals, and generating insights. Automatic categorization of transactions is performed **on your device** using Apple's on-device Foundation Models.
+Your information is used solely to provide the app's features on your device: displaying your transactions, calculating budgets and net totals, accounting for housing payments, and generating insights. Automatic categorization of transactions is performed **on your device** using Apple's on-device Foundation Models.
 
 ---
 
@@ -39,6 +39,9 @@ Penny can optionally connect to the following third-party services, only if you 
 
 ### SimpleFIN (optional)
 If you connect your bank or credit cards, Penny communicates directly with the [SimpleFIN Bridge](https://www.simplefin.org) service to retrieve your account balances and transactions. Your use of SimpleFIN is subject to SimpleFIN's own terms and privacy practices. Your SimpleFIN access credential is stored securely in your device's Keychain.
+### Apple Wallet / FinanceKit (optional)
+If you connect Apple Wallet, Penny uses Apple's **FinanceKit** framework to read balances and transactions for the Apple Card, Apple Cash, Apple Savings, and other cards you choose to share. Access is granted by you through a system permission prompt and can be revoked at any time in iOS Settings. This data is read and processed **on your device**. It is not sent to the developer or to any third-party server. Penny only reads this data and cannot make payments or change your accounts.
+
 ### Apple Foundation Models (on-device)
 Penny uses Apple's on-device AI to categorize transactions and parse imported email text. This processing happens entirely on your device and is not sent to Apple or any other party.
 
@@ -52,7 +55,7 @@ Penny uses Apple's on-device AI to categorize transactions and parse imported em
 
 ## 6. Data Retention and Deletion
 
-Your data remains on your device until you delete it. You can delete individual records within the app at any time. Deleting the app from your device removes its locally stored data. If you enabled iCloud sync, you can manage or remove that data through your device's iCloud settings.
+Your data remains on your device until you delete it. You can delete individual records within the app at any time, disconnect SimpleFIN or Apple Wallet in the app, and revoke Wallet access in iOS Settings. Deleting the app from your device removes its locally stored data. If you enabled iCloud sync, you can manage or remove that data through your device's iCloud settings.
 
 ---
 
@@ -64,7 +67,7 @@ Penny is not directed to children under the age of 13, and we do not knowingly c
 
 ## 8. Security
 
-Sensitive credentials (such as your SimpleFIN access URL) are stored using the iOS Keychain. Your financial data benefits from the security protections built into iOS and, where applicable, Apple's CloudKit. No method of storage or transmission is 100% secure, but because your data stays on your device and in your private iCloud account, it is never exposed to a developer-operated server.
+Sensitive credentials (such as your SimpleFIN access URL) are stored using the iOS Keychain. Apple Wallet data is accessed only through Apple's FinanceKit with your explicit permission. Your financial data benefits from the security protections built into iOS and, where applicable, Apple's CloudKit. No method of storage or transmission is 100% secure, but because your data stays on your device and in your private iCloud account, it is never exposed to a developer-operated server.
 
 ---
 

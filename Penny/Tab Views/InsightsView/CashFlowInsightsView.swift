@@ -50,7 +50,7 @@ struct CashFlowInsightsView: View {
         let totalOut = data.links.filter { $0.source == "cashflow" }.reduce(0.0) { $0 + $1.value }
         let net = totalIn - totalOut
 
-        return AdaptiveSplitLayout {
+        return AdaptiveSplitLayout(showsDivider: true) {
             if data.nodes.isEmpty {
                 ContentUnavailableView(
                     "No Cash Flow",
@@ -71,12 +71,14 @@ struct CashFlowInsightsView: View {
                     .padding(.horizontal, 12)
                     .animation(.smooth, value: dateOffset)
 
-                flowList(title: "In", column: 0, data: data)
-                flowList(title: "Out", column: 2, data: data)
+                flowList(title: "Income", column: 0, data: data)
+                flowList(title: "Expenses", column: 2, data: data)
+                    .padding(.bottom, 8)
             }
         } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
+                showRecurringSection: false,
                 transactions: windowedTransactions,
                 namespace: namespace,
                 hideRecent: true,
@@ -243,7 +245,7 @@ struct CashFlowInsightsView: View {
         let total = rows.reduce(0.0) { $0 + $1.amount }
 
         if !rows.isEmpty {
-            VStack(spacing: 10) {
+            VStack {
                 HStack {
                     Text(title)
                         .font(.headline)
@@ -252,9 +254,10 @@ struct CashFlowInsightsView: View {
 
                     Text(amountTruncation(for: total, currencySymbol: currencySymbol))
                         .font(.headline)
+                        .foregroundStyle(.secondary)
                         .contentTransition(.numericText())
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal)
 
                 ForEach(rows, id: \.node.id) { row in
                     InsightBreakdownRow(
@@ -265,9 +268,10 @@ struct CashFlowInsightsView: View {
                         amount: row.amount
                     )
                 }
+                .padding(.top, 4)
             }
             .padding(.horizontal)
-            .padding(.top, 12)
+            .padding(.top)
             .animation(.smooth, value: dateOffset)
         }
     }

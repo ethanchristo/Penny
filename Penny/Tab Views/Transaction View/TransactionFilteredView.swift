@@ -11,14 +11,16 @@ import SwiftUI
 struct TransactionFilteredView: View {
     @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
     @AppStorage("currency_symbol", store: .group) private var currencySymbol: String = "$"
-    @AppStorage("show_recurring_section") private var showRecurringSection = true
-    @AppStorage("hide_recurrence_ended") private var hideRecurrenceEnded = false
-    @AppStorage("show_upcoming_section") private var showUpcomingSection = true
     
     @Environment(\.modelContext) var modelContext
     
     @Binding var editingTransaction: Transaction?
-    
+    /// Whether the recurring section starts expanded. Callers pass this; the user can still tap the header to toggle it.
+    let showRecurringSection: Bool
+    @State private var recurringToggledByUser: Bool?
+
+    @State private var hideRecurrenceEnded = false
+    @State private var showUpcomingSection = false
     @State private var showBudgetSection = false
     @State private var pendingDeletion: Transaction? = nil
     
@@ -26,6 +28,8 @@ struct TransactionFilteredView: View {
     
     let transactions: [Transaction]
     let namespace: Namespace.ID
+
+    private var isRecurringExpanded: Bool { recurringToggledByUser ?? showRecurringSection }
 
     let hideRecent: Bool
     let hideRecurrence: Bool
@@ -221,7 +225,7 @@ struct TransactionFilteredView: View {
                         mainTxSection(from: sections)
                     }
                 }
-                .animation(.snappy, value: showRecurringSection)
+                .animation(.snappy, value: isRecurringExpanded)
                 .animation(.snappy, value: showUpcomingSection)
             }
 
@@ -248,7 +252,7 @@ struct TransactionFilteredView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: haptics)
         .sensoryFeedback(.impact(weight: .light), trigger: showBudgetSection)
         .sensoryFeedback(.impact(weight: .light), trigger: showUpcomingSection)
-        .sensoryFeedback(.impact(weight: .light), trigger: showRecurringSection)
+        .sensoryFeedback(.impact(weight: .light), trigger: isRecurringExpanded)
         .alert(
             "Delete Transaction?",
             isPresented: Binding(
@@ -286,8 +290,7 @@ struct TransactionFilteredView: View {
                     .rotationEffect(.degrees(showUpcomingSection ? 180 : 0))
             }
             .font(.headline)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 30)
+            .sectionHeaderFrame()
             .padding(.top, 20)
             .onTapGesture { showUpcomingSection.toggle() }
             
@@ -326,8 +329,7 @@ struct TransactionFilteredView: View {
                     .tint(.secondary)
             }
             .font(.headline)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 30)
+            .sectionHeaderFrame()
             .padding(.top, 20)
             
             ForEach(sections.recent) { transaction in
@@ -362,6 +364,7 @@ struct TransactionFilteredView: View {
                     .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26))
             }
             .padding(.horizontal, 24)
+            .padding(.top)
         }
     }
     
@@ -389,15 +392,14 @@ struct TransactionFilteredView: View {
                 
                 Image(systemName: "chevron.up")
                     .foregroundStyle(.secondary)
-                    .rotationEffect(.degrees(showRecurringSection ? 180 : 0))
+                    .rotationEffect(.degrees(isRecurringExpanded ? 180 : 0))
             }
             .font(.headline)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 30)
+            .sectionHeaderFrame()
             .padding(.top, 20)
-            .onTapGesture { showRecurringSection.toggle() }
+            .onTapGesture { recurringToggledByUser = !isRecurringExpanded }
             
-            if showRecurringSection {
+            if isRecurringExpanded {
                 ForEach(sections.recurring) { transaction in
                     Button {
                         haptics += 1
@@ -428,8 +430,7 @@ struct TransactionFilteredView: View {
                 if (!hideUpcoming && !sections.upcoming.isEmpty) && (!hideRecurrence && !sections.recurring.isEmpty) {
                     Text("Transactions")
                         .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 30)
+                        .sectionHeaderFrame()
                         .padding(.top, 20)
                 }
                 
@@ -456,8 +457,7 @@ struct TransactionFilteredView: View {
                 if !sections.upcoming.isEmpty || !sections.recurring.isEmpty {
                     Text("Transactions")
                         .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 30)
+                        .sectionHeaderFrame()
                         .padding(.top, 20)
                 }
                 
@@ -492,8 +492,7 @@ struct TransactionFilteredView: View {
                         }
                         .font(.subheadline)
                         .foregroundStyle(Color.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 30)
+                        .sectionHeaderFrame()
                         .padding(.top, 10)
                     }
                 }
@@ -507,6 +506,19 @@ struct TransactionFilteredView: View {
             SimpleFINConfig.dismissExternalID(externalID)
         }
         modelContext.delete(transaction)
+    }
+}
+
+private extension View {
+    /// Caps a section header at the same 500pt width as `TransactionRowView` so it stays
+    /// aligned with the rows on wide layouts (iPad). The 14pt inner inset plus the outer
+    /// default padding matches the original 30pt inset on iPhone.
+    func sectionHeaderFrame() -> some View {
+        self
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: 500)
+            .padding(.horizontal)
     }
 }
 

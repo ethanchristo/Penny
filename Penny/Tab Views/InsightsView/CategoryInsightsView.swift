@@ -38,7 +38,7 @@ struct CategoryInsightsView: View {
     }
 
     var body: some View {
-        AdaptiveSplitLayout {
+        AdaptiveSplitLayout(showsDivider: true) {
             CategoryPieChartView(
                 transactions: transactions,
                 categories: categories,
@@ -47,6 +47,7 @@ struct CategoryInsightsView: View {
         } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
+                showRecurringSection: false,
                 transactions: windowedTransactions,
                 namespace: namespace,
                 hideRecent: true,

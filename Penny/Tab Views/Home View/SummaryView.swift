@@ -15,9 +15,12 @@ struct SummaryView: View {
     let currencyCode: String
     let transactions: [Transaction]
     let selectedTimeRange: HomeTimeRange
+    let namespace: Namespace.ID
 
     private struct Tile: Identifiable {
         let id: PersistentIdentifier
+        /// Must equal the `sourceID` the destination zooms from (a model's `UUID` id).
+        let transitionID: UUID
         let symbol: String
         let color: Color
         let amount: Double
@@ -32,7 +35,6 @@ struct SummaryView: View {
         case categorySpending(Category)
     }
 
-    @Namespace private var namespace
     @State private var navRoute: Route?
 
     /// Overspent budget tiles followed by the top-spending categories. Built in one
@@ -60,7 +62,10 @@ struct SummaryView: View {
                 remaining = budget.remaining
                 guard remaining < 0 else { continue }
             }
+            // Category budgets zoom with `category.id` (see `BudgetInsightsView.Source.transitionID`);
+            // freestanding budgets zoom with `budget.id`.
             overspent.append(Tile(id: budget.persistentModelID,
+                                  transitionID: budget.category?.id ?? budget.id,
                                   symbol: budget.displaySymbol,
                                   color: budget.category?.color ?? budget.color,
                                   amount: remaining,
@@ -76,7 +81,7 @@ struct SummaryView: View {
             .sorted { $0.amount > $1.amount }
             .filter { !overspentCategories.contains($0.category.persistentModelID) }
             .prefix(3)
-            .map { Tile(id: $0.category.persistentModelID, symbol: $0.category.symbol,
+            .map { Tile(id: $0.category.persistentModelID, transitionID: $0.category.id, symbol: $0.category.symbol,
                         color: $0.category.color, amount: $0.amount, overspent: false,
                         route: .categorySpending($0.category)) }
 
@@ -93,7 +98,7 @@ struct SummaryView: View {
                                 amount: tile.amount, overspent: tile.overspent)
                 }
                 .buttonStyle(.plain)
-                .matchedTransitionSource(id: tile.id, in: namespace)
+                .matchedTransitionSource(id: tile.transitionID, in: namespace)
             }
         }
         .navigationDestination(item: $navRoute) { route in
@@ -113,6 +118,7 @@ struct SummaryView: View {
             CategorySpendingView(category: category,
                                  transactions: categoriedTransactions(for: transactions, with: category),
                                  selectedTimeRange: selectedTimeRange)
+            .navigationTransition(.zoom(sourceID: category.id, in: namespace))
         }
     }
     

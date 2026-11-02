@@ -132,6 +132,7 @@ struct RecurringInsightsView: View {
         } transactions: {
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
+                showRecurringSection: true,
                 transactions: displayedTransactions,
                 namespace: namespace,
                 hideRecent: true,
@@ -210,9 +211,9 @@ struct RecurringInsightsView: View {
                 }
             }
         }
-        .onAppear {
-            windowTimeRange = selectedTimeRange
-        }
+//        .onAppear {
+//            windowTimeRange = selectedTimeRange
+//        }
         .sheet(isPresented: $showAddTransaction) {
             NavigationStack {
                 SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, budget: nil)
@@ -436,13 +437,13 @@ private struct RecurringCalendarChart: View {
             dotRow(dots)
         }
         .frame(maxWidth: .infinity, minHeight: 48)
-        .glassEffect(.regular.tint(isToday ? Color(.systemGray4) : .clear), in: RoundedRectangle(cornerRadius: 8))
+        .glassEffect(.regular.tint(isToday ? Color(.systemGray4) : .clear), in: RoundedRectangle(cornerRadius: 12))
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.08))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.accentColor, lineWidth: isSelected ? 2 : 0)
         )
         .contentShape(.rect)
@@ -608,7 +609,7 @@ struct MiniRecurringChart: View {
                 let colors = dotColors(for: day)
                 let isToday = calendar.isDate(day, inSameDayAs: today)
 
-                RoundedRectangle(cornerRadius: 5)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(colors.first.map { $0.opacity(0.25) } ?? Color.gray.opacity(0.12))
                     .frame(height: 16)
                     .overlay {
@@ -622,7 +623,7 @@ struct MiniRecurringChart: View {
                     }
                     .overlay {
                         if isToday {
-                            RoundedRectangle(cornerRadius: 5)
+                            RoundedRectangle(cornerRadius: 12)
                                 .strokeBorder(tint, lineWidth: 1.5)
                         }
                     }

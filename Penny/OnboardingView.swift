@@ -9,107 +9,152 @@ import SwiftData
 import SwiftUI
 
 enum OnboardingPage: Int, CaseIterable {
-    case netTotal
-    case categories
+    case overview
     case budgets
-    case insights
     case housing
-    case simpleFIN
-    case financeKit
+    case insights
+    case connect
 
     var title: String {
         switch self {
-        case .netTotal:
-            return "Net Total"
-        case .categories:
-            return "Categories"
+        case .overview:
+            return "Welcome to Penny"
         case .budgets:
-            return "Pre-Funded & One-Time Budgets"
-        case .insights:
-            return "Insights"
+            return "Budgets That Work"
         case .housing:
             return "Housing"
-        case .simpleFIN:
-            return "Connect Your Bank"
-        case .financeKit:
-            return "Apple Wallet"
+        case .insights:
+            return "Know Where It Goes"
+        case .connect:
+            return "Connect Your Accounts"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .netTotal:
-            return "Your net total is what you actually have to spend. Penny starts with your checking balance, then subtracts credit card balances, upcoming recurring payments, and money you've set aside, so the number on the Home tab is real."
-        case .categories:
-            return "Every transaction gets a category, like Groceries, Dining, or Payroll. Categories power your budgets and insights, and you can add rules so imported transactions get sorted automatically."
+        case .overview:
+            return "Penny shows what you can actually spend, not just what's in your account."
         case .budgets:
-            return "Pre-funded budgets set money aside up front and you spend it down. That money comes out of your net total right away, so you don't spend it twice. Budgets without pre-funding work the other way: you contribute toward a goal over time. One-time budgets cover a set date range, like a trip, instead of resetting every month."
-        case .insights:
-            return "See where your money goes with breakdowns of cash flow, spending by category, and recurring charges, so you can spot trends before they surprise you."
+            return "Set money aside for what matters and watch it work for you."
         case .housing:
-            return "Add your rent or mortgage so upcoming payments count against your net total before they're due. You can always change this later in Settings."
-        case .simpleFIN:
-            return "SimpleFIN securely imports transactions and balances from your bank and credit cards. It costs $1.50 a month or $15 a year, and your bank login never touches Penny."
-        case .financeKit:
-            return "Connect Apple Card, Apple Cash, Apple Savings, and other cards in your Wallet. Everything stays on your device."
+            return "Add your rent or mortgage so upcoming payments count against your net total before they're due."
+        case .insights:
+            return "Clear breakdowns that help you spot trends before they surprise you."
+        case .connect:
+            return "Bring in your transactions automatically. You can always do this later in Settings."
         }
     }
 
-    /// Name of the screenshot asset shown on this page. Add these to the asset
-    /// catalog. Until then, a placeholder is shown in their place.
-    var imageName: String {
+    var symbol: String {
         switch self {
-        case .netTotal:
-            return "onboarding_net_total"
-        case .categories:
-            return "onboarding_categories"
+        case .overview:
+            return "dollarsign.circle.fill"
         case .budgets:
-            return "onboarding_budgets"
-        case .insights:
-            return "onboarding_insights"
+            return "banknote.fill"
         case .housing:
-            return "onboarding_housing"
-        case .simpleFIN:
-            return "onboarding_simplefin"
-        case .financeKit:
-            return "onboarding_financekit"
-        }
-    }
-
-    /// SF Symbol used in the placeholder while the screenshot is missing.
-    var fallbackSymbol: String {
-        switch self {
-        case .netTotal:
-            return "dollarsign.circle"
-        case .categories:
-            return "tag"
-        case .budgets:
-            return "banknote"
+            return "house.fill"
         case .insights:
             return "chart.bar.xaxis"
-        case .housing:
-            return "house"
-        case .simpleFIN:
-            return "icloud.and.arrow.down"
-        case .financeKit:
-            return "wallet.bifold"
+        case .connect:
+            return "link.circle.fill"
         }
     }
 
-    /// Pages that let the user set something up (or skip it) rather than just
-    /// explaining a feature.
-    var isSetup: Bool {
+    var tint: Color {
         switch self {
-        case .housing, .simpleFIN, .financeKit:
-            return true
-        default:
-            return false
+        case .overview:
+            return .green
+        case .budgets:
+            return .orange
+        case .housing:
+            return .teal
+        case .insights:
+            return .purple
+        case .connect:
+            return .blue
+        }
+    }
+
+    var features: [OnboardingFeature] {
+        switch self {
+        case .overview:
+            return [
+                OnboardingFeature(
+                    symbol: "dollarsign.circle",
+                    title: "Net Total",
+                    detail: "Starts with your checking balance, then subtracts credit card balances, upcoming recurring payments, and money you've set aside."
+                ),
+                OnboardingFeature(
+                    symbol: "tag",
+                    title: "Categories",
+                    detail: "Every transaction gets a category, and rules sort imported ones automatically."
+                )
+            ]
+        case .budgets:
+            return [
+                OnboardingFeature(
+                    symbol: "lock.fill",
+                    title: "Pre-Funded",
+                    detail: "Choose whether money is set aside up front and comes out of your net total right away, so you don't spend it twice."
+                ),
+                OnboardingFeature(
+                    symbol: "target",
+                    title: "Goals",
+                    detail: "Budgets without pre-funding work the other way. You contribute toward a goal over time."
+                ),
+                OnboardingFeature(
+                    symbol: "calendar",
+                    title: "One-Time",
+                    detail: "Set a date range if you want to for a single event, like a trip."
+                )
+            ]
+        case .insights:
+            return [
+                OnboardingFeature(
+                    symbol: "arrow.left.arrow.right",
+                    title: "Cash Flow",
+                    detail: "See what's coming in and going out over time."
+                ),
+                OnboardingFeature(
+                    symbol: "chart.pie",
+                    title: "Spending by Category",
+                    detail: "Find out which categories take the biggest share."
+                ),
+                OnboardingFeature(
+                    symbol: "repeat",
+                    title: "Recurring Charges",
+                    detail: "Keep track of subscriptions and bills."
+                )
+            ]
+        case .housing:
+            return [
+                OnboardingFeature(
+                    symbol: "calendar.badge.clock",
+                    title: "Counted Early",
+                    detail: "Upcoming housing payments are subtracted from your net total before they're due."
+                ),
+                OnboardingFeature(
+                    symbol: "gearshape",
+                    title: "Change It Anytime",
+                    detail: "You can edit or add housing payments later in Settings."
+                )
+            ]
+        case .connect:
+            return []
         }
     }
 
     var isLast: Bool {
         self == OnboardingPage.allCases.last
     }
+}
+
+struct OnboardingFeature: Identifiable {
+    let symbol: String
+    let title: String
+    let detail: String
+
+    var id: String { title }
 }
 
 struct OnboardingView: View {
@@ -120,41 +165,46 @@ struct OnboardingView: View {
 
     @Query private var housing: [Housing]
 
-    @State private var currentPage = OnboardingPage.netTotal.rawValue
+    @State private var currentPage = OnboardingPage.overview.rawValue
     // Bank-sync configs live in UserDefaults and aren't observable, so they're
     // re-read whenever the pager reappears (e.g. after returning from setup).
     @State private var simpleFINConnected = SimpleFINConfig.isConfigured
     @State private var financeKitConnected = FinanceKitConfig.isConfigured
 
     private var page: OnboardingPage {
-        OnboardingPage(rawValue: currentPage) ?? .netTotal
+        OnboardingPage(rawValue: currentPage) ?? .overview
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                TabView(selection: $currentPage) {
-                    ForEach(OnboardingPage.allCases, id: \.self) { page in
-                        pageView(for: page)
-                            .tag(page.rawValue)
+            ZStack {
+                background
+
+                VStack(spacing: 0) {
+                    TabView(selection: $currentPage) {
+                        ForEach(OnboardingPage.allCases, id: \.self) { page in
+                            pageView(for: page)
+                                .tag(page.rawValue)
+                        }
                     }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut, value: currentPage)
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .animation(.easeInOut, value: currentPage)
 
-                pageIndicator
+                    pageIndicator
 
-                Button(action: advance) {
-                    Text(primaryButtonTitle)
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
+                    Button(action: advance) {
+                        Text(primaryButtonTitle)
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .tint(page.tint)
+                    .controlSize(.large)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
                 }
-                .buttonStyle(.glassProminent)
-                .controlSize(.large)
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
             }
             .toolbar(.hidden, for: .navigationBar)
             .onAppear {
@@ -164,147 +214,216 @@ struct OnboardingView: View {
         }
     }
 
-    /// "Skip" on setup pages that haven't been completed, otherwise "Continue",
-    /// with "Get Started" on the final page.
-    private var primaryButtonTitle: String {
-        if page.isSetup && !isComplete(page) {
-            return page.isLast ? "Skip & Get Started" : "Skip"
-        }
-        return page.isLast ? "Get Started" : "Continue"
+    /// A soft tinted backdrop that shifts color with the page, giving the glass
+    /// something to refract.
+    private var background: some View {
+        LinearGradient(
+            colors: [page.tint.opacity(0.35), page.tint.opacity(0.08), Color(.systemBackground)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.5), value: currentPage)
     }
 
-    private func isComplete(_ page: OnboardingPage) -> Bool {
-        switch page {
-        case .housing:
-            return !housing.isEmpty
-        case .simpleFIN:
-            return simpleFINConnected
-        case .financeKit:
-            return financeKitConnected
-        default:
-            return true
+    /// "Skip" on the connect page until something is connected, otherwise
+    /// "Continue", with "Get Started" on the final page.
+    private var primaryButtonTitle: String {
+        if page.isLast {
+            return anythingConnected ? "Get Started" : "Skip & Get Started"
         }
+        if page == .housing {
+            return housing.isEmpty ? "Skip" : "Continue"
+        }
+        return "Continue"
+    }
+
+    private var anythingConnected: Bool {
+        simpleFINConnected || financeKitConnected
     }
 
     private var pageIndicator: some View {
-        HStack(spacing: 8) {
-            ForEach(OnboardingPage.allCases, id: \.self) { item in
-                Capsule()
-                    .fill(item == page ? Color.accentColor : Color.secondary.opacity(0.3))
-                    .frame(width: item == page ? 20 : 8, height: 8)
-                    .animation(.easeInOut, value: currentPage)
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
+                ForEach(OnboardingPage.allCases, id: \.self) { item in
+                    Capsule()
+                        .fill(item == page ? page.tint : Color.secondary.opacity(0.3))
+                        .frame(width: item == page ? 20 : 8, height: 8)
+                        .animation(.easeInOut, value: currentPage)
+                }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .glassEffect(.regular, in: .capsule)
         }
         .padding(.top, 8)
     }
 
-    @ViewBuilder
     private func pageView(for page: OnboardingPage) -> some View {
-        VStack(spacing: 24) {
-            screenshotArea(for: page)
+        ScrollView {
+            VStack(spacing: 24) {
+                header(for: page)
 
+                if page == .connect {
+                    connectCards
+                } else {
+                    featureCards(for: page)
+                }
+
+                if page == .housing {
+                    housingAction
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 40)
+            .padding(.bottom, 16)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func header(for page: OnboardingPage) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: page.symbol)
+                .font(.system(size: 44, weight: .medium))
+                .foregroundStyle(page.tint)
+                .frame(width: 96, height: 96)
+                .glassEffect(.regular.tint(page.tint.opacity(0.2)), in: .circle)
+
+            Text(page.title)
+                .font(.largeTitle.bold())
+                .multilineTextAlignment(.center)
+
+            Text(page.subtitle)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func featureCards(for page: OnboardingPage) -> some View {
+        GlassEffectContainer(spacing: 12) {
             VStack(spacing: 12) {
-                Text(page.title)
-                    .font(.title.bold())
-                    .multilineTextAlignment(.center)
+                ForEach(page.features) { feature in
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: feature.symbol)
+                            .font(.title2)
+                            .foregroundStyle(page.tint)
+                            .frame(width: 32)
 
-                Text(page.subtitle)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.horizontal, 28)
-
-            if page.isSetup {
-                setupAction(for: page)
-            }
-        }
-        .padding(.top, 24)
-        .padding(.bottom, 8)
-    }
-
-    /// Displays the page's screenshot, falling back to a phone-shaped
-    /// placeholder while the artwork hasn't been added yet. Fills whatever
-    /// vertical space the text leaves over.
-    @ViewBuilder
-    private func screenshotArea(for page: OnboardingPage) -> some View {
-        Group {
-            if UIImage(named: page.imageName) != nil {
-                Image(page.imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: 28))
-            } else {
-                RoundedRectangle(cornerRadius: 28)
-                    .fill(Color.secondary.opacity(0.12))
-                    .aspectRatio(9 / 19.5, contentMode: .fit)
-                    .overlay {
-                        VStack(spacing: 12) {
-                            Image(systemName: page.fallbackSymbol)
-                                .font(.system(size: 48, weight: .medium))
-                                .foregroundStyle(Color.accentColor)
-                            Text("Screenshot")
-                                .font(.caption)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(feature.title)
+                                .font(.headline)
+                            Text(feature.detail)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
+
+                        Spacer(minLength: 0)
                     }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 24))
+                }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 24)
     }
 
-    /// The button that opens the relevant setup screen, or a confirmation once
-    /// it's been set up.
-    @ViewBuilder
-    private func setupAction(for page: OnboardingPage) -> some View {
+    private var housingAction: some View {
         VStack(spacing: 8) {
             NavigationLink {
-                switch page {
-                case .housing:
-                    HousingView()
-                case .simpleFIN:
-                    SimpleFinSetupView()
-                default:
-                    FinanceKitSetupView()
-                }
+                HousingView()
             } label: {
-                Label(setupButtonTitle(for: page), systemImage: page.fallbackSymbol)
+                Label(housing.isEmpty ? "Set Up Housing" : "Manage Housing", systemImage: "house")
                     .font(.headline)
-                    .padding(.horizontal, 8)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.glass)
             .controlSize(.large)
 
-            if isComplete(page) {
-                Label(setupStatus(for: page), systemImage: "checkmark.circle.fill")
+            if !housing.isEmpty {
+                Label("\(housing.count) housing payment\(housing.count == 1 ? "" : "s") added", systemImage: "checkmark.circle.fill")
                     .font(.footnote)
                     .foregroundStyle(.green)
             }
         }
     }
 
-    private func setupButtonTitle(for page: OnboardingPage) -> String {
-        switch page {
-        case .housing:
-            return housing.isEmpty ? "Set Up Housing" : "Manage Housing"
-        case .simpleFIN:
-            return simpleFINConnected ? "Manage SimpleFIN" : "Register with SimpleFIN"
-        default:
-            return financeKitConnected ? "Manage Apple Wallet" : "Connect Apple Wallet"
+    private var connectCards: some View {
+        GlassEffectContainer(spacing: 12) {
+            VStack(spacing: 12) {
+                connectCard(
+                    symbol: "icloud.and.arrow.down",
+                    title: "SimpleFIN",
+                    detail: "Securely imports transactions and balances from your bank and credit cards. It costs $1.50 a month or $15 a year, and your bank login never touches Penny.",
+                    isConnected: simpleFINConnected,
+                    connectTitle: "Register with SimpleFIN",
+                    manageTitle: "Manage SimpleFIN"
+                ) {
+                    SimpleFinSetupView()
+                }
+
+                connectCard(
+                    symbol: "wallet.bifold",
+                    title: "Apple Wallet",
+                    detail: "Connect Apple Card, Apple Cash, Apple Savings, and other cards in your Wallet. Everything stays on your device.",
+                    isConnected: financeKitConnected,
+                    connectTitle: "Connect Apple Wallet",
+                    manageTitle: "Manage Apple Wallet"
+                ) {
+                    FinanceKitSetupView()
+                }
+            }
         }
     }
 
-    private func setupStatus(for page: OnboardingPage) -> String {
-        switch page {
-        case .housing:
-            return "\(housing.count) housing payment\(housing.count == 1 ? "" : "s") added"
-        case .simpleFIN:
-            return "SimpleFIN connected"
-        default:
-            return "Apple Wallet connected"
+    private func connectCard<Destination: View>(
+        symbol: String,
+        title: String,
+        detail: String,
+        isConnected: Bool,
+        connectTitle: String,
+        manageTitle: String,
+        @ViewBuilder destination: () -> Destination
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: symbol)
+                    .font(.title2)
+                    .foregroundStyle(OnboardingPage.connect.tint)
+                    .frame(width: 32)
+
+                Text(title)
+                    .font(.headline)
+
+                Spacer(minLength: 0)
+
+                if isConnected {
+                    Label("Connected", systemImage: "checkmark.circle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.green)
+                }
+            }
+
+            Text(detail)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            NavigationLink(destination: destination) {
+                Text(isConnected ? manageTitle : connectTitle)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
+            }
+            .buttonStyle(.glass)
+            .controlSize(.large)
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular, in: .rect(cornerRadius: 24))
     }
 
     private func advance() {
