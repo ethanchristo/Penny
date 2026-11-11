@@ -7,11 +7,13 @@
 
 import SwiftData
 import SwiftUI
+import TipKit
 
 struct NetTotalView: View {
     @AppStorage("net_total_credit_mode", store: .group) private var creditMode: CreditCardBalanceType = .balance
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) var reduceTransparency
 
     @ScaledMetric(relativeTo: .largeTitle) private var netTotalFontSize: CGFloat = 34
 
@@ -92,6 +94,7 @@ struct NetTotalView: View {
                 Button {
                     haptics += 1
                     netTotalSheet = true
+                    HomeTour.featureUsed(NetTotalTip.self)
                 } label: {
                     VStack(spacing: 4) {
                         Text("Net Total")
@@ -115,7 +118,8 @@ struct NetTotalView: View {
                     .padding(20)
                     .frame(maxWidth: 200, maxHeight: .infinity)
                 }
-                .glassEffect(.clear.interactive(), in: RoundedRectangle(cornerRadius: 36))
+                .glassEffect(reduceTransparency ? .regular.interactive(): .clear.interactive(), in: RoundedRectangle(cornerRadius: 36))
+                .popoverTip(HomeTour.tips.currentTip as? NetTotalTip, arrowEdge: .top)
                 .contextMenu {
                     Picker("Credit Card Mode", selection: $creditMode) {
                         ForEach([CreditCardBalanceType.balance, .statement]) { mode in
@@ -128,6 +132,7 @@ struct NetTotalView: View {
                 VStack(spacing: 15) {
                     Button {
                         open(.budgets)
+                        HomeTour.featureUsed(BudgetsTip.self)
                     } label: {
                         HStack {
                             Label("Budgets", systemImage: "rectangle.grid.2x2.fill")
@@ -140,10 +145,12 @@ struct NetTotalView: View {
                         .padding(.horizontal)
                     }
                     .frame(maxWidth: 200, maxHeight: .infinity) // Stretch!
-                    .glassEffect(.clear.interactive())
+                    .glassEffect(reduceTransparency ? .regular.interactive(): .clear.interactive())
+                    .popoverTip(HomeTour.tips.currentTip as? BudgetsTip, arrowEdge: .top)
                     
                     Button {
                         open(.insights)
+                        HomeTour.featureUsed(InsightsTip.self)
                     } label: {
                         HStack {
                             Label("Insights", systemImage: "chart.bar.fill")
@@ -156,7 +163,8 @@ struct NetTotalView: View {
                         .padding(.horizontal)
                     }
                     .frame(maxWidth: 200, maxHeight: .infinity) // Stretch!
-                    .glassEffect(.clear.interactive())
+                    .glassEffect(reduceTransparency ? .regular.interactive(): .clear.interactive())
+                    .popoverTip(HomeTour.tips.currentTip as? InsightsTip, arrowEdge: .top)
                 }
             }
             .tint(.primary)
@@ -214,5 +222,29 @@ struct NetTotalView: View {
             }
             .task { breakdown = computeBreakdown() }
         }
+    }
+}
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    @Previewable @State var selectedTimeRange: HomeTimeRange = .monthly
+    @Previewable @Environment(\.modelContext) var modelContext
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    ScrollView {
+        NetTotalView(
+            selectedTimeRange: $selectedTimeRange,
+            modelContext: modelContext,
+            scenePhase: .active,
+            scriptUrl: "",
+            scriptSecret: "",
+            currencyCode: "USD",
+            currencySymbol: "$",
+            transactions: transactions,
+            netIncome: 4_800,
+            netExpenses: 1_138.13,
+            netTotal: 3_661.87,
+            backgroundColor: Color(.systemGreen)
+        )
     }
 }

@@ -11,7 +11,9 @@ import SwiftUI
 // MARK: - Category
 @Model
 class Category {
-    #Index<Category>([\.name], [\.role])
+    // `role` is deliberately not indexed: it's an optional Codable enum, which SwiftData
+    // stores as a composite attribute, and Core Data throws at launch when asked to index it.
+    #Index<Category>([\.name])
 
     // Stable, store-independent identifier. Used as the `id` for CategoryEntity so
     // App Intents / Spotlight can resolve a category across the process boundary,

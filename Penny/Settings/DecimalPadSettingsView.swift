@@ -153,3 +153,11 @@ struct DecimalPadSettingsView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview {
+    NavigationStack {
+        DecimalPadSettingsView()
+    }
+}

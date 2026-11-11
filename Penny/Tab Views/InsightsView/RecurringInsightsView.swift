@@ -362,7 +362,7 @@ private struct RecurringCalendarChart: View {
     let timeRange: HomeTimeRange
     @Binding var selectedDate: Date?
 
-    private var calendar: Calendar { Calendar.current }
+    private var calendar: Calendar { Calendar.app }
 
     private let dayColumns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
     private let monthColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
@@ -551,7 +551,7 @@ struct MiniRecurringChart: View {
     let items: [RecurringItem]
     var tint: Color = .accentColor
 
-    private var calendar: Calendar { Calendar.current }
+    private var calendar: Calendar { Calendar.app }
 
     private var firstOfMonth: Date {
         let components = calendar.dateComponents([.year, .month], from: .now)
@@ -632,4 +632,26 @@ struct MiniRecurringChart: View {
         }
         .frame(maxHeight: .infinity, alignment: .top)
     }
+}
+
+// MARK: - Previews
+
+#Preview("Recurring", traits: .sampleData) {
+    NavigationStack {
+        RecurringInsightsView()
+    }
+}
+
+#Preview("Calendar", traits: .sampleData) {
+    @Previewable @State var selectedDate: Date?
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    RecurringCalendarChart(items: recurringItems(from: transactions), window: windowBounds(for: .monthly, offset: 0), timeRange: .monthly, selectedDate: $selectedDate)
+        .padding()
+}
+
+#Preview("Mini Calendar", traits: .sampleData) {
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    MiniRecurringChart(items: recurringItems(from: transactions))
+        .frame(width: 160, height: 160)
+        .padding()
 }

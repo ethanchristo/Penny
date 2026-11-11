@@ -230,3 +230,18 @@ struct CategoryPieChartView: View {
         .padding(.top)
     }
 }
+
+// MARK: - Previews
+
+#Preview("Categories", traits: .sampleData) {
+    NavigationStack {
+        CategoryInsightsView()
+    }
+}
+
+#Preview("Pie Chart", traits: .sampleData) {
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    @Previewable @Query(sort: \Category.name) var categories: [Category]
+    CategoryPieChartView(transactions: transactions, categories: categories, window: windowBounds(for: .monthly, offset: 0))
+        .padding()
+}

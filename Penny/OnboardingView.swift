@@ -205,6 +205,9 @@ struct OnboardingView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 24)
                 }
+                // Measure the bottom padding from the screen edge rather than above the
+                // home indicator, so the button sits as low as its side margins.
+                .ignoresSafeArea(.container, edges: .bottom)
             }
             .toolbar(.hidden, for: .navigationBar)
             .onAppear {

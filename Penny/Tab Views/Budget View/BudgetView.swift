@@ -528,3 +528,20 @@ extension BudgetInsightsView.Source {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Budgets", traits: .sampleData) {
+    NavigationStack {
+        BudgetView()
+    }
+}
+
+#Preview("Budget Cell", traits: .sampleData) {
+    @Previewable @Query(filter: #Predicate<Category> { $0.name == "Groceries" }) var categories: [Category]
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    if let category = categories.first {
+        SharedBudgetCell(source: .category(category, filter: transactions))
+            .padding()
+    }
+}

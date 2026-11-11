@@ -238,3 +238,26 @@ struct BudgetSettingsViewInfo: View {
         category.budget?.budgetWindow = budgetWindow
     }
 }
+
+// MARK: - Previews
+
+#Preview("Budget Settings", traits: .sampleData) {
+    NavigationStack {
+        BudgetSettingsView()
+    }
+}
+
+#Preview("Overall Budget", traits: .sampleData) {
+    NavigationStack {
+        OverallBudgetSettingsView(bindableOverall: OverallBudget())
+    }
+}
+
+#Preview("Category Budget", traits: .sampleData) {
+    @Previewable @Query(filter: #Predicate<Category> { $0.name == "Groceries" }) var categories: [Category]
+    if let category = categories.first {
+        List {
+            BudgetSettingsViewInfo(category: category)
+        }
+    }
+}

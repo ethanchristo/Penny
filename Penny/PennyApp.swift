@@ -7,6 +7,7 @@
 
 import SwiftData
 import SwiftUI
+import TipKit
 
 @main
 struct PennyApp: App {
@@ -18,15 +19,24 @@ struct PennyApp: App {
 
     @Environment(\.scenePhase) private var scenePhase
 
-    /// Builds a rounded-design version of the font in the given title attributes,
-    /// falling back to the system's default title sizes.
-    private func roundedFont(for attributes: [NSAttributedString.Key: Any]) -> UIFont? {
-        let baseFont = attributes[.font] as? UIFont
-            ?? UIFont.preferredFont(forTextStyle: .largeTitle)
-        guard let descriptor = baseFont.fontDescriptor.withDesign(.rounded) else {
-            return nil
-        }
-        return UIFont(descriptor: descriptor, size: baseFont.pointSize)
+    init() {
+        // Loads persisted tip state (which coach marks were already seen).
+        try? Tips.configure([.displayFrequency(.immediate)])
+
+        // `.fontDesign(.rounded)` doesn't reach UIKit-drawn navigation bar titles,
+        // so give the bar rounded fonts that match the system's sizes and weights.
+        let navigationBar = UINavigationBar.appearance()
+        navigationBar.largeTitleTextAttributes = [.font: Self.roundedFont(.largeTitle, weight: .bold)]
+        navigationBar.titleTextAttributes = [.font: Self.roundedFont(.headline, weight: .semibold)]
+    }
+
+    /// A rounded system font at the given text style's size that still scales
+    /// with Dynamic Type.
+    private static func roundedFont(_ style: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
+        let size = UIFont.preferredFont(forTextStyle: style, compatibleWith: UITraitCollection(preferredContentSizeCategory: .large)).pointSize
+        let base = UIFont.systemFont(ofSize: size, weight: weight)
+        let rounded = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: size) } ?? base
+        return UIFontMetrics(forTextStyle: style).scaledFont(for: rounded)
     }
     
 
@@ -45,6 +55,10 @@ struct PennyApp: App {
                     .fontDesign(.rounded)
                     .preferredColorScheme(currentTheme.colorScheme)
                     .interactiveDismissDisabled()
+            }
+            // Hold the Overview walkthrough until the intro onboarding is dismissed.
+            .onChange(of: hasCompletedOnboarding, initial: true) {
+                NetTotalTip.hasCompletedOnboarding = hasCompletedOnboarding
             }
             .task {
                 await seedDefaultCategoriesIfNeeded()

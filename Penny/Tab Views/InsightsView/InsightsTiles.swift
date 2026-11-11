@@ -661,3 +661,19 @@ struct InsightBreakdownRow: View {
         .glassEffect(.regular.tint(color.opacity(0.1)))
     }
 }
+
+// MARK: - Previews
+
+#Preview("Tiles", traits: .sampleData) {
+    NavigationStack {
+        InsightsTiles()
+    }
+}
+
+#Preview("Breakdown Row") {
+    List {
+        InsightBreakdownRow(symbol: "🛒", name: "Groceries", color: .green, share: 0.42, amount: 198.99)
+        InsightBreakdownRow(symbol: nil, name: "Other", color: .gray, share: 0.08, amount: 38)
+        ShareBar(share: 0.6, color: .orange)
+    }
+}

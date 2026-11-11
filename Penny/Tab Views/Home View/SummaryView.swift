@@ -167,3 +167,13 @@ struct SummaryView: View {
         return "$\(amount)"
     }
 }
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    @Previewable @Namespace var namespace
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    NavigationStack {
+        SummaryView(currencyCode: "USD", transactions: transactions, selectedTimeRange: .monthly, namespace: namespace)
+    }
+}

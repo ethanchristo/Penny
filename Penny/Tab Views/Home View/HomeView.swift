@@ -7,6 +7,7 @@
 
 import SwiftData
 import SwiftUI
+import TipKit
 import WidgetKit
 
 struct HomeView: View {
@@ -193,10 +194,9 @@ struct HomeView: View {
                     namespace: namespace
                 )
             }
-//            .scrollClipDisabled()
+            .scrollClipDisabled()
             .padding(.horizontal, 24)
             .padding(.top, 4)
-            .scrollEdgeEffectStyle(.soft, for: [.leading, .trailing])
             
             TransactionFilteredView(
                 editingTransaction: $editingTransaction,
@@ -243,9 +243,11 @@ struct HomeView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     settingsSheet = true
+                    HomeTour.featureUsed(SettingsTip.self)
                 } label: {
                     Label("Settings", systemImage: "gear")
                 }
+                .popoverTip(HomeTour.tips.currentTip as? SettingsTip)
 //                    .matchedTransitionSource(id: "settings", in: namespace)
             }
 
@@ -255,10 +257,12 @@ struct HomeView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showAddTransaction = true
+                        HomeTour.featureUsed(AddTransactionTip.self)
                     } label: {
                         Label("Add Transaction", systemImage: "plus")
                     }
                     .matchedTransitionSource(id: "addTransaction", in: namespace)
+                    .popoverTip(HomeTour.tips.currentTip as? AddTransactionTip)
                 }
             }
         }
@@ -749,5 +753,28 @@ struct CategorySpendingView: View {
             }
             .navigationTransition(.zoom(sourceID: transaction.id, in: namespace))
         }
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Home", traits: .sampleData) {
+    NavigationStack {
+        HomeView(stats: HomeStats(), horizontalSizeClass: .compact, backgroundColor: Color(.systemGreen))
+    }
+}
+
+#Preview("Budget Summary", traits: .sampleData) {
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    BudgetSummaryView(summary: Summary(), transactions: transactions, selectedTimeRange: .monthly)
+        .padding()
+}
+
+#Preview("Category Spending", traits: .sampleData) {
+    @Previewable @Query(filter: #Predicate<Category> { $0.name == "Groceries" }) var categories: [Category]
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    if let category = categories.first {
+        CategorySpendingView(category: category, transactions: transactions, selectedTimeRange: .monthly)
+            .padding()
     }
 }

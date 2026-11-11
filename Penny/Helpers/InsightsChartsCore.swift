@@ -603,3 +603,14 @@ func cashFlowSankeyData(
 
     return (nodes, links)
 }
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    @Previewable @Query(sort: \Category.name) var categories: [Category]
+    let data = cashFlowSankeyData(transactions: transactions, categories: categories, window: windowBounds(for: .monthly, offset: 0))
+    SankeyDiagram(nodes: data.nodes, links: data.links)
+        .frame(height: 300)
+        .padding()
+}

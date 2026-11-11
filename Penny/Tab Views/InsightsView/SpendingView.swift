@@ -540,3 +540,24 @@ private struct ChartContainer: ViewModifier {
             .padding(.horizontal, 12)
     }
 }
+
+// MARK: - Previews
+
+#Preview("Spending", traits: .sampleData) {
+    NavigationStack {
+        SpendingView()
+    }
+}
+
+#Preview("Overview", traits: .sampleData) {
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    SpendingOverview(transactions: transactions, timeRange: .monthly, offset: 0, window: windowBounds(for: .monthly, offset: 0))
+        .padding()
+}
+
+#Preview("Chart", traits: .sampleData) {
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    SpendingChartView(transactions: transactions, filterIsIncomeContribute: nil, timeRange: .weekly, window: windowBounds(for: .weekly, offset: 0))
+        .frame(height: 250)
+        .padding()
+}

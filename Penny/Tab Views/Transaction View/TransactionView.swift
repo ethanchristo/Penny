@@ -7,6 +7,7 @@
 
 import SwiftData
 import SwiftUI
+import TipKit
 
 struct TransactionView: View {
     @AppStorage("default_checking_name") private var defaultCheckingName: String = "Checking"
@@ -268,10 +269,13 @@ struct TransactionView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showAddTransaction = true
+                    HomeTour.featureUsed(AddTransactionTip.self)
                 } label: {
                     Label("Add", systemImage: "plus")
                 }
                 .matchedTransitionSource(id: "addTransaction", in: namespace)
+                // On iPad the Overview has no add button; this pane's one carries the tip.
+                .popoverTip(HomeTour.tips.currentTip as? AddTransactionTip)
             }
         }
         .sheet(isPresented: $showAddTransaction) {
@@ -294,3 +298,10 @@ struct TransactionView: View {
     }
 }
 
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    NavigationStack {
+        TransactionView()
+    }
+}

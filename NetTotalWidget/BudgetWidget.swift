@@ -207,15 +207,73 @@ struct BudgetProvider: AppIntentTimelineProvider {
 
 struct BudgetWidgetView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.widgetFamily) private var family
     var entry: BudgetEntry
 
     var body: some View {
-        if let snapshot = entry.snapshot {
+        switch (family, entry.snapshot) {
+        case (.accessoryCircular, let snapshot?):
+            circular(snapshot)
+        case (.accessoryRectangular, let snapshot?):
+            rectangular(snapshot)
+        case (.accessoryInline, let snapshot?):
+            Text("\(snapshot.symbol) \(snapshot.currencySymbol)\(amountTruncation(for: abs(snapshot.remaining))) \(snapshot.descriptor)")
+                .containerBackground(.clear, for: .widget)
+        case (.accessoryCircular, nil), (.accessoryRectangular, nil), (.accessoryInline, nil):
+            Label("Pick a budget", systemImage: "chart.bar")
+                .font(.caption)
+                .containerBackground(.clear, for: .widget)
+        case (_, let snapshot?):
             filled(snapshot)
-        } else {
+        case (_, nil):
             unconfigured
         }
     }
+
+    // MARK: Lock Screen
+
+    /// Share of the budget used so far, clamped to 0...1 for the gauges.
+    private func usedFraction(_ snapshot: BudgetSnapshot) -> Double {
+        let total = max(snapshot.spent, 0) + max(snapshot.remaining, 0)
+        guard total > 0 else { return 0 }
+        return min(max(snapshot.spent / total, 0), 1)
+    }
+
+    private func circular(_ snapshot: BudgetSnapshot) -> some View {
+        Gauge(value: usedFraction(snapshot)) {
+            Text(snapshot.symbol)
+        } currentValueLabel: {
+            Text(amountTruncation(for: abs(snapshot.remaining)))
+                .minimumScaleFactor(0.5)
+        }
+        .gaugeStyle(.accessoryCircular)
+        .fontDesign(.rounded)
+        .containerBackground(.clear, for: .widget)
+    }
+
+    private func rectangular(_ snapshot: BudgetSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(snapshot.symbol) \(snapshot.title)")
+                .font(.headline)
+                .lineLimit(1)
+                .widgetAccentable()
+
+            Text("\(snapshot.currencySymbol)\(amountTruncation(for: abs(snapshot.remaining))) \(snapshot.descriptor)")
+                .font(.body.bold())
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Gauge(value: usedFraction(snapshot)) {
+                EmptyView()
+            }
+            .gaugeStyle(.accessoryLinearCapacity)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fontDesign(.rounded)
+        .containerBackground(.clear, for: .widget)
+    }
+
+    // MARK: Home Screen
 
     private func color(_ hex: String) -> Color { Color(hex: hex) ?? .green }
 
@@ -300,6 +358,49 @@ struct BudgetWidget: Widget {
         }
         .configurationDisplayName("Budget")
         .description("Track a budget's remaining balance.")
-        .supportedFamilies([.systemSmall])
+        .supportedFamilies([.systemSmall, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
+}
+
+// MARK: - Previews
+
+#Preview(as: .systemSmall) {
+    BudgetWidget()
+} timeline: {
+    BudgetEntry(date: .now, snapshot: BudgetSnapshot(
+        title: "Groceries", symbol: "🛒", colorHex: "#32D74B",
+        spent: 320, remaining: 180, descriptor: "remaining",
+        windowText: "this month", currencySymbol: "$"
+    ))
+    BudgetEntry(date: .now, snapshot: nil)
+}
+
+#Preview("Lock Screen Circular", as: .accessoryCircular) {
+    BudgetWidget()
+} timeline: {
+    BudgetEntry(date: .now, snapshot: BudgetSnapshot(
+        title: "Groceries", symbol: "🛒", colorHex: "#32D74B",
+        spent: 320, remaining: 180, descriptor: "remaining",
+        windowText: "this month", currencySymbol: "$"
+    ))
+}
+
+#Preview("Lock Screen Rectangular", as: .accessoryRectangular) {
+    BudgetWidget()
+} timeline: {
+    BudgetEntry(date: .now, snapshot: BudgetSnapshot(
+        title: "Groceries", symbol: "🛒", colorHex: "#32D74B",
+        spent: 320, remaining: 180, descriptor: "remaining",
+        windowText: "this month", currencySymbol: "$"
+    ))
+}
+
+#Preview("Lock Screen Inline", as: .accessoryInline) {
+    BudgetWidget()
+} timeline: {
+    BudgetEntry(date: .now, snapshot: BudgetSnapshot(
+        title: "Groceries", symbol: "🛒", colorHex: "#32D74B",
+        spent: 320, remaining: 180, descriptor: "remaining",
+        windowText: "this month", currencySymbol: "$"
+    ))
 }

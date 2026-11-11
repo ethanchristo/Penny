@@ -375,7 +375,8 @@ struct EditTransactionView: View {
                     .font(.title)
                     .foregroundStyle(.secondary)
                 
-                Text(inputAmount)
+                Text(inputAmount.isEmpty ? "0.00" : inputAmount)
+                    .foregroundStyle(inputAmount.isEmpty ? .secondary : .primary)
                     .font(.system(size: amountFontSize, weight: .bold)) // Very large font, scales with Dynamic Type
                     .lineLimit(1)
                     .minimumScaleFactor(0.5) // Shrink to fit long amounts
@@ -609,11 +610,11 @@ struct EditTransactionView: View {
                 Picker("Type", selection: $draft.isIncome) {
                     if draft.budget?.preFunding != true {
                         Label(incomeName, systemImage: "tray.and.arrow.down").tag(true)
-                            .foregroundStyle(.green)
+                            .tint(.green)
                     }
                     
                     Label(expenseName, systemImage: "tray.and.arrow.up").tag(false)
-                        .foregroundStyle(.red)
+                        .tint(.red)
                 }
                 .pickerStyle(.palette)
             }
@@ -771,10 +772,13 @@ struct EditTransactionView: View {
     }
 
     private func loadAmount() -> Void {
+        let amount = transaction?.amount ?? 0.00
         if decimalPadType == .ATM {
-            inputAmount = String(format: "%.2f", transaction?.amount ?? 0.00)
+            inputAmount = String(format: "%.2f", amount)
         } else {
-            inputAmount = String(transaction?.amount ?? 0.00)
+            // Start empty for new entries so typing doesn't append to a "0.0" seed;
+            // the display falls back to a "0.00" placeholder while empty.
+            inputAmount = amount == 0 ? "" : String(format: "%.2f", amount)
         }
     }
 }
@@ -912,4 +916,15 @@ struct ShowTransactionView: View {
             Spacer()
         }
     }
+}
+
+// MARK: - Previews
+
+#Preview("New Transaction", traits: .sampleData) {
+    SingleTransactionView(initialEditMode: true, transaction: nil, category: nil, budget: nil)
+}
+
+#Preview("Existing Transaction", traits: .sampleData) {
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    SingleTransactionView(initialEditMode: false, transaction: transactions.first, category: nil, budget: nil)
 }

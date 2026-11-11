@@ -340,3 +340,18 @@ struct EditBudgetView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("New Budget", traits: .sampleData) {
+    NavigationStack {
+        EditBudgetView(budget: nil)
+    }
+}
+
+#Preview("Edit Budget", traits: .sampleData) {
+    @Previewable @Query(filter: #Predicate<Budget> { $0.name == "Vacation" }) var budgets: [Budget]
+    NavigationStack {
+        EditBudgetView(budget: budgets.first)
+    }
+}

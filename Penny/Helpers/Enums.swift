@@ -106,6 +106,25 @@ enum CreditCardBalanceType: String, CaseIterable, Identifiable {
     }
 }
 
+/// The user's preferred first day of the week, stored in the App Group as
+/// `week_start` so widgets and extensions share it. Read via `Calendar.app`.
+nonisolated enum WeekStart: String, CaseIterable, Identifiable {
+    case system = "System"
+    case sunday = "Sunday"
+    case monday = "Monday"
+
+    var id: String { rawValue }
+
+    /// The `Calendar.firstWeekday` value to apply, or `nil` to keep the locale's default.
+    var firstWeekday: Int? {
+        switch self {
+        case .system: nil
+        case .sunday: 1
+        case .monday: 2
+        }
+    }
+}
+
 enum DecimalPadType: String, CaseIterable, Identifiable {
     case ATM = "ATM"
     case decimal = "Decimal"

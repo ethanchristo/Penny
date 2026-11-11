@@ -403,3 +403,27 @@ private struct MatchTransactionPickerView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Housing", traits: .sampleData) {
+    NavigationStack {
+        HousingView()
+    }
+}
+
+#Preview("Edit Housing", traits: .sampleData) {
+    @Previewable @Environment(\.modelContext) var modelContext
+    @Previewable @Query var housings: [Housing]
+    NavigationStack {
+        editHousingView(modelContext: modelContext, housing: housings.first)
+    }
+}
+
+#Preview("Match Transaction", traits: .sampleData) {
+    @Previewable @Environment(\.modelContext) var modelContext
+    @Previewable @Query(sort: \Account.name) var accounts: [Account]
+    NavigationStack {
+        MatchTransactionPickerView(modelContext: modelContext, account: accounts.first, accountLabel: accounts.first?.name ?? "Account") { _ in }
+    }
+}

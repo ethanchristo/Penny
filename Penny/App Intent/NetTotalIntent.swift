@@ -89,3 +89,9 @@ struct NetTotalSnippetView: View {
 
 /// Registers the net total as an App Shortcut so it surfaces as a top hit in
 /// Spotlight and is voice-invokable with Siri without the user building a shortcut.
+
+// MARK: - Previews
+
+#Preview {
+    NetTotalSnippetView(netTotal: 1_234.56, currencySymbol: "$", yellowThreshold: 100)
+}

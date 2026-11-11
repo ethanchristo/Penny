@@ -42,3 +42,11 @@ struct ImportTransactionsView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    NavigationStack {
+        ImportTransactionsView()
+    }
+}

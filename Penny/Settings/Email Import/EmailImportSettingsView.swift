@@ -223,4 +223,10 @@ struct EmailImportSettingsView: View {
     }
 }
 
+// MARK: - Previews
 
+#Preview(traits: .sampleData) {
+    NavigationStack {
+        EmailImportSettingsView()
+    }
+}

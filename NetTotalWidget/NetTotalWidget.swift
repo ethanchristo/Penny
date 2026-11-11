@@ -47,6 +47,7 @@ struct PennyWidgetEntryView : View {
     @AppStorage("net_total_credit_mode", store: .group) private var creditMode: CreditCardBalanceType = .balance
     
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.widgetFamily) private var family
     
     var entry: Provider.Entry
 
@@ -69,6 +70,58 @@ struct PennyWidgetEntryView : View {
     }
 
     var body: some View {
+        switch family {
+        case .accessoryCircular:
+            circular
+        case .accessoryRectangular:
+            rectangular
+        case .accessoryInline:
+            Label(amountTruncation(for: entry.netTotal, currencySymbol: currencySymbol), systemImage: "dollarsign.circle")
+                .containerBackground(.clear, for: .widget)
+        default:
+            home
+        }
+    }
+
+    // MARK: Lock Screen
+
+    private var circular: some View {
+        VStack(spacing: 0) {
+            Text("NET")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+            Text(amountTruncation(for: entry.netTotal, currencySymbol: currencySymbol))
+                .font(.headline.bold())
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+        }
+        .padding(.horizontal, 4)
+        .fontDesign(.rounded)
+        .containerBackground(.clear, for: .widget)
+    }
+
+    private var rectangular: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Label("Net Total", systemImage: "dollarsign.circle")
+                .font(.headline)
+                .widgetAccentable()
+            Text(amountTruncation(for: entry.netTotal, currencySymbol: currencySymbol))
+                .font(.title2.bold())
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(creditMode.title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fontDesign(.rounded)
+        .containerBackground(.clear, for: .widget)
+    }
+
+    // MARK: Home Screen
+
+    private var home: some View {
         VStack(spacing: 4) {
             VStack {
                 Text("Net Total")
@@ -105,6 +158,34 @@ struct NetTotalWidget: Widget {
         }
         .configurationDisplayName("Net Total")
         .description("Shows your current net total in plain text.")
-        .supportedFamilies([.systemSmall])
+        .supportedFamilies([.systemSmall, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
+}
+
+// MARK: - Previews
+
+#Preview(as: .systemSmall) {
+    NetTotalWidget()
+} timeline: {
+    SimpleEntry(date: .now, netTotal: 1_234.56)
+    SimpleEntry(date: .now, netTotal: 42.10)
+    SimpleEntry(date: .now, netTotal: -250)
+}
+
+#Preview("Lock Screen Circular", as: .accessoryCircular) {
+    NetTotalWidget()
+} timeline: {
+    SimpleEntry(date: .now, netTotal: 1_234.56)
+}
+
+#Preview("Lock Screen Rectangular", as: .accessoryRectangular) {
+    NetTotalWidget()
+} timeline: {
+    SimpleEntry(date: .now, netTotal: 1_234.56)
+}
+
+#Preview("Lock Screen Inline", as: .accessoryInline) {
+    NetTotalWidget()
+} timeline: {
+    SimpleEntry(date: .now, netTotal: 1_234.56)
 }

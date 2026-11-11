@@ -52,3 +52,17 @@ struct AdaptiveSplitLayout<Info: View, Transactions: View>: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview {
+    AdaptiveSplitLayout(showsDivider: true) {
+        Text("Info")
+            .frame(maxWidth: .infinity, minHeight: 200)
+            .background(.blue.opacity(0.2))
+    } transactions: {
+        Text("Transactions")
+            .frame(maxWidth: .infinity, minHeight: 400)
+            .background(.green.opacity(0.2))
+    }
+}

@@ -20,6 +20,19 @@ nonisolated extension UserDefaults {
     }()
 }
 
+nonisolated extension Calendar {
+    /// `Calendar.current` with the user's "Start of Week" preference applied.
+    /// Use this anywhere week boundaries or weekday ordering matter.
+    static var app: Calendar {
+        var calendar = Calendar.current
+        let raw = UserDefaults.group.string(forKey: "week_start") ?? WeekStart.system.rawValue
+        if let firstWeekday = (WeekStart(rawValue: raw) ?? .system).firstWeekday {
+            calendar.firstWeekday = firstWeekday
+        }
+        return calendar
+    }
+}
+
 // Pure date arithmetic with no shared mutable state. Marked `nonisolated` so the
 // net-total aggregation can run on the background `StatsCalculator` ModelActor even
 // though the module defaults to `@MainActor` isolation.
@@ -36,7 +49,8 @@ nonisolated extension Date {
     }
     
     var startOfWeek: Date {
-        Calendar.current.dateComponents([.calendar, .yearForWeekOfYear, .weekOfYear], from: self).date ?? self
+        let calendar = Calendar.app
+        return calendar.dateInterval(of: .weekOfYear, for: self)?.start ?? calendar.startOfDay(for: self)
     }
     
     var endOfWeek: Date {
@@ -47,9 +61,10 @@ nonisolated extension Date {
     }
     
     var startOfFortnight: Date {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2 // Monday
-        
+        // Use the same calendar as `startOfWeek` so the parity check and the
+        // week boundary agree on which day a week begins.
+        let calendar = Calendar.app
+
         // Safety: Default to self if calculation fails
         let weekOfYear = calendar.component(.weekOfYear, from: self)
         

@@ -517,3 +517,11 @@ private struct FinanceKitAccountMappingView: View {
         onDone()
     }
 }
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    NavigationStack {
+        FinanceKitSetupView()
+    }
+}

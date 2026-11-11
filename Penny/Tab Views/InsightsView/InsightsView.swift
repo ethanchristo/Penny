@@ -22,3 +22,11 @@ struct InsightsView: View {
         .navigationBarTitleDisplayMode(.large)
     }
 }
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    NavigationStack {
+        InsightsView()
+    }
+}

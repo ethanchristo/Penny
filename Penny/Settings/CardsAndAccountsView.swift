@@ -754,3 +754,38 @@ enum BankSyncMapping {
         try? context.save()
     }
 }
+
+// MARK: - Previews
+
+#Preview("Cards & Accounts", traits: .sampleData) {
+    NavigationStack {
+        CardsAndAccountsView()
+    }
+}
+
+#Preview("Account Cell", traits: .sampleData) {
+    @Previewable @Query(sort: \Account.name) var accounts: [Account]
+    List(accounts) { account in
+        AccountCell(account: account)
+    }
+}
+
+#Preview("New Account", traits: .sampleData) {
+    NavigationStack {
+        EditAccountView(account: nil)
+    }
+}
+
+#Preview("Edit Account", traits: .sampleData) {
+    @Previewable @Query(sort: \Account.name) var accounts: [Account]
+    NavigationStack {
+        EditAccountView(account: accounts.first)
+    }
+}
+
+#Preview("Default Checking", traits: .sampleData) {
+    @Previewable @State var checkingName = "Checking"
+    NavigationStack {
+        EditDefaultCheckingView(checkingName: $checkingName)
+    }
+}

@@ -100,10 +100,39 @@ struct SimpleFinSetupView: View {
     @ViewBuilder
     private var connectSection: some View {
         Section {
-            Link("Get a Setup Token from SimpleFIN",
-                 destination: URL(string: "https://bridge.simplefin.org/simplefin/create")!)
+            Text("SimpleFIN Bridge is a separate service that securely reads your bank transactions and shares them with apps you approve. It's a paid subscription run by SimpleFIN, not Penny.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        } header: {
+            Text("What is SimpleFIN?")
         }
-        
+
+        Section {
+            SetupStepRow(number: 1, title: "Create a SimpleFIN Bridge account") {
+                Text("Sign up and start a subscription on the SimpleFIN Bridge website.")
+                Link(destination: URL(string: "https://bridge.simplefin.org")!) {
+                    Label("Open SimpleFIN Bridge", systemImage: "safari")
+                }
+            }
+
+            SetupStepRow(number: 2, title: "Connect your bank") {
+                Text("In SimpleFIN, add a bank connection, search for your bank, and sign in. Repeat for each bank or card you want in Penny. It can take a few minutes for accounts to appear.")
+            }
+
+            SetupStepRow(number: 3, title: "Create a Setup Token") {
+                Text("Go to the Apps page in SimpleFIN and create a new app connection. Name it \"Penny\" so you can recognize it later, then copy the long token it shows.")
+                Link(destination: URL(string: "https://bridge.simplefin.org/simplefin/create")!) {
+                    Label("Create a Setup Token", systemImage: "key")
+                }
+            }
+
+            SetupStepRow(number: 4, title: "Paste it below and tap Connect") {
+                Text("Penny then shows the accounts it found so you can match each one to an account in Penny or skip it.")
+            }
+        } header: {
+            Text("How to Connect")
+        }
+
         Section {
             TextField("Paste your Setup Token", text: $setupToken, axis: .vertical)
                 .lineLimit(3...6)
@@ -111,13 +140,30 @@ struct SimpleFinSetupView: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
 
+            PasteButton(payloadType: String.self) { strings in
+                if let token = strings.first {
+                    setupToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+
             Button("Connect") {
                 Task { await connect() }
             }
             .disabled(setupToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } header: {
+            Text("Setup Token")
         } footer: {
-            Text("Setup Tokens work once. Penny trades it for an access key stored in your Keychain — your bank login never touches this app.")
+            Text("Setup Tokens work once. Penny trades it for an access key stored in your Keychain — your bank login never touches this app. If connecting fails, create a new token in SimpleFIN and try again.")
         }
+
+        Section {
+            Label("SimpleFIN refreshes bank data about once a day, so new transactions can take up to a day to show up.", systemImage: "clock")
+            Label("Disconnecting here doesn't cancel your SimpleFIN subscription. Manage that on the SimpleFIN website.", systemImage: "creditcard")
+        } header: {
+            Text("Good to Know")
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -569,5 +615,42 @@ private struct SimpleFINAccountMappingView: View {
         }
         try? modelContext.save()
         onDone()
+    }
+}
+
+/// One numbered step in the SimpleFIN connection guide.
+private struct SetupStepRow<Content: View>: View {
+    let number: Int
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text("\(number)")
+                .font(.subheadline.bold())
+                .foregroundStyle(.white)
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(.tint))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.headline)
+                content
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Step \(number): \(title)")
+    }
+}
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    NavigationStack {
+        SimpleFinSetupView()
     }
 }

@@ -14,11 +14,26 @@ struct EditCategoryView: View {
     @Environment(\.modelContext) var modelContext
     @Environment(\.dismiss) var dismiss
 
+    @Query private var allCategories: [Category]
+
     @FocusState private var isBudgetFocused: Bool
 
     @State private var draft = Draft()
 
     let category: Category?
+
+    private var trimmedName: String {
+        draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// True when another category (case-insensitively) already uses this name.
+    private var isDuplicateName: Bool {
+        allCategories.contains { other in
+            other.persistentModelID != category?.persistentModelID
+                && other.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .localizedCaseInsensitiveCompare(trimmedName) == .orderedSame
+        }
+    }
 
     private struct Draft {
         var name: String = ""
@@ -59,7 +74,7 @@ struct EditCategoryView: View {
                 .clipShape(Circle())
 
             Form {
-                Section("Name & Symbol") {
+                Section {
                     TextField("Account Name", text: $draft.name)
                         .disabled(draft.role == .payroll || draft.role == .miscellaneous)
 
@@ -73,6 +88,13 @@ struct EditCategoryView: View {
                             }
 
                         ColorPicker(selection: $draft.color, supportsOpacity: false) { }
+                    }
+                } header: {
+                    Text("Name & Symbol")
+                } footer: {
+                    if isDuplicateName {
+                        Text("A category named \"\(trimmedName)\" already exists.")
+                            .foregroundStyle(.red)
                     }
                 }
 
@@ -118,7 +140,7 @@ struct EditCategoryView: View {
             }
             .scrollEdgeEffectStyle(.soft, for: .top)
         }
-        .interactiveDismissDisabled(draft.name.isEmpty)
+        .interactiveDismissDisabled(trimmedName.isEmpty)
         .background(Color(UIColor.systemGroupedBackground))
         .navigationTitle(draft.name.isEmpty ? "New Category" : draft.name)
         .toolbarTitleDisplayMode(.inline)
@@ -151,7 +173,7 @@ struct EditCategoryView: View {
                     isBudgetFocused = false
                     dismiss()
                 }
-                .disabled(draft.name.isEmpty)
+                .disabled(trimmedName.isEmpty || isDuplicateName)
             }
         }
         .onAppear {
@@ -166,14 +188,14 @@ struct EditCategoryView: View {
     private func saveCategory() -> Void {
         if let category {
             // Update existing
-            category.name = draft.name
+            category.name = trimmedName
             category.symbol = draft.symbol
             category.color = draft.color
             applyBudget(to: category)
         } else {
             // Create brand new
             let newCategory = Category(
-                name: draft.name,
+                name: trimmedName,
                 symbol: draft.symbol,
                 role: draft.role
             )
@@ -202,5 +224,20 @@ struct EditCategoryView: View {
                 budgetWindow: draft.hasBudget ? draft.budgetWindow : nil
             )
         }
+    }
+}
+
+// MARK: - Previews
+
+#Preview("New Category", traits: .sampleData) {
+    NavigationStack {
+        EditCategoryView(category: nil)
+    }
+}
+
+#Preview("Edit Category", traits: .sampleData) {
+    @Previewable @Query(filter: #Predicate<Category> { $0.name == "Groceries" }) var categories: [Category]
+    NavigationStack {
+        EditCategoryView(category: categories.first)
     }
 }

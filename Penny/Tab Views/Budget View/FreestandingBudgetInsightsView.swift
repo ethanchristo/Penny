@@ -485,3 +485,31 @@ struct FreestandingBudgetCell: View {
         return [first, second]
     }
 }
+
+// MARK: - Previews
+
+#Preview("Insights", traits: .sampleData) {
+    @Previewable @Namespace var namespace
+    @Previewable @Query(filter: #Predicate<Budget> { $0.name == "Vacation" }) var budgets: [Budget]
+    if let budget = budgets.first {
+        NavigationStack {
+            FreestandingBudgetInsightsView(budget: budget, namespace: namespace)
+        }
+    }
+}
+
+#Preview("Chart", traits: .sampleData) {
+    @Previewable @Query(filter: #Predicate<Budget> { $0.name == "Vacation" }) var budgets: [Budget]
+    if let budget = budgets.first {
+        FreestandingBudgetChartView(budget: budget)
+            .padding()
+    }
+}
+
+#Preview("Cell", traits: .sampleData) {
+    @Previewable @Query(filter: #Predicate<Budget> { $0.name == "Vacation" }) var budgets: [Budget]
+    if let budget = budgets.first {
+        FreestandingBudgetCell(budget: budget)
+            .padding()
+    }
+}

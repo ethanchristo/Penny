@@ -412,3 +412,37 @@ struct CategoryTransactionPageView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Category Budget", traits: .sampleData) {
+    @Previewable @Namespace var namespace
+    @Previewable @Query(filter: #Predicate<Category> { $0.name == "Groceries" }) var categories: [Category]
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    if let category = categories.first {
+        NavigationStack {
+            BudgetInsightsView(namespace: namespace, source: .category(category, filter: transactions))
+        }
+    }
+}
+
+#Preview("Overall Budget", traits: .sampleData) {
+    @Previewable @Namespace var namespace
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    NavigationStack {
+        BudgetInsightsView(namespace: namespace, source: .overall(OverallBudget(), filter: transactions))
+    }
+}
+
+#Preview("Header") {
+    @Previewable @State var dateOffset: Int? = 0
+    BudgetHeaderView(dateOffset: $dateOffset, spent: 320, budgetLimit: 400, currencyCode: "USD", color: .green, symbol: "🛒")
+}
+
+#Preview("Transaction Page", traits: .sampleData) {
+    @Previewable @Namespace var namespace
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    NavigationStack {
+        CategoryTransactionPageView(transactionsForPage: transactions, searchText: "", filterAccount: nil, filterCategory: nil, namespace: namespace)
+    }
+}

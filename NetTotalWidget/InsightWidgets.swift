@@ -344,7 +344,7 @@ struct RecurringInsightProvider: TimelineProvider {
         let inputs = loadInsightsInputs()
         let items = recurringItems(from: inputs.transactions)
 
-        let calendar = Calendar.current
+        let calendar = Calendar.app
         let components = calendar.dateComponents([.year, .month], from: Date())
         let firstOfMonth = calendar.date(from: components) ?? Date()
         let dayCount = calendar.range(of: .day, in: .month, for: firstOfMonth)?.count ?? 30
@@ -410,4 +410,58 @@ struct RecurringInsightWidget: Widget {
         .description("This month's recurring transactions at a glance.")
         .supportedFamilies([.systemSmall])
     }
+}
+
+// MARK: - Previews
+
+#Preview("Spending", as: .systemSmall) {
+    SpendingInsightWidget()
+} timeline: {
+    SpendingInsightEntry(date: .now, points: [
+        SpendingChartPoint(label: "Mon", amount: 42, type: .expense),
+        SpendingChartPoint(label: "Tue", amount: 18, type: .expense),
+        SpendingChartPoint(label: "Wed", amount: 2_400, type: .income),
+        SpendingChartPoint(label: "Wed", amount: 86, type: .expense),
+        SpendingChartPoint(label: "Thu", amount: 12, type: .expense),
+        SpendingChartPoint(label: "Fri", amount: 64, type: .expense),
+    ])
+}
+
+#Preview("Categories", as: .systemSmall) {
+    CategoriesInsightWidget()
+} timeline: {
+    CategoriesInsightEntry(date: .now, slices: [
+        WidgetPieSlice(name: "Groceries", amount: 198.99, color: .green),
+        WidgetPieSlice(name: "Food", amount: 42.10, color: .orange),
+        WidgetPieSlice(name: "Shopping", amount: 129.99, color: .pink),
+    ])
+}
+
+#Preview("Cash Flow", as: .systemSmall) {
+    CashFlowInsightWidget()
+} timeline: {
+    CashFlowInsightEntry(
+        date: .now,
+        nodes: [
+            SankeyNode(id: "payroll", label: "Payroll", color: .yellow, column: 0),
+            SankeyNode(id: "cashflow", label: "Cash Flow", color: .teal, column: 1),
+            SankeyNode(id: "groceries", label: "Groceries", color: .green, column: 2),
+            SankeyNode(id: "savings", label: "Savings", color: .brown, column: 2),
+        ],
+        links: [
+            SankeyLink(source: "payroll", target: "cashflow", value: 2_400),
+            SankeyLink(source: "cashflow", target: "groceries", value: 400),
+            SankeyLink(source: "cashflow", target: "savings", value: 2_000),
+        ]
+    )
+}
+
+#Preview("Recurring", as: .systemSmall) {
+    RecurringInsightWidget()
+} timeline: {
+    RecurringInsightEntry(
+        date: .now,
+        leadingBlanks: 3,
+        days: (0..<30).map { WidgetRecurringDay(index: $0, color: [1, 14, 15, 28].contains($0) ? .orange : nil) }
+    )
 }

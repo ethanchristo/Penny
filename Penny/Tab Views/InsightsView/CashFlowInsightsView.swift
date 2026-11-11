@@ -323,3 +323,11 @@ struct CashFlowInsightsView: View {
         windowBounds(for: windowTimeRange, offset: dateOffset)
     }
 }
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    NavigationStack {
+        CashFlowInsightsView()
+    }
+}

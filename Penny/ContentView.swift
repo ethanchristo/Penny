@@ -55,3 +55,9 @@ struct ContentView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    ContentView()
+}

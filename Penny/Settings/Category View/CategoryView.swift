@@ -83,3 +83,11 @@ struct CategoryView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    NavigationStack {
+        CategoryView()
+    }
+}

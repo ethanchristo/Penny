@@ -155,7 +155,7 @@ struct TransactionFilteredView: View {
 
     /// The representative start date for a transaction's group, based on the selected `grouping`.
     private func groupingKey(for date: Date) -> Date {
-        let calendar = Calendar.current
+        let calendar = Calendar.app
         switch grouping {
         case .none, .day:
             return calendar.startOfDay(for: date)
@@ -168,7 +168,7 @@ struct TransactionFilteredView: View {
 
     /// The header label for a group, formatted to match the selected `grouping`.
     private func headerTitle(for key: Date) -> String {
-        let calendar = Calendar.current
+        let calendar = Calendar.app
         switch grouping {
         case .week:
             guard let interval = calendar.dateInterval(of: .weekOfYear, for: key) else {
@@ -657,5 +657,39 @@ struct TransactionRowView: View {
         .frame(maxWidth: 500, alignment: .leading)
         .glassEffect()
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Filtered List", traits: .sampleData) {
+    @Previewable @Namespace var namespace
+    @Previewable @State var editingTransaction: Transaction?
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    NavigationStack {
+        ScrollView {
+            TransactionFilteredView(
+                editingTransaction: $editingTransaction,
+                showRecurringSection: true,
+                transactions: transactions,
+                namespace: namespace,
+                hideRecent: false,
+                hideRecurrence: false,
+                hideUpcoming: false,
+                hideAllTx: false,
+                searchString: "",
+                filterAccount: nil,
+                filterCategory: nil,
+                filterBudget: nil,
+                filterIsIncome: nil
+            )
+        }
+    }
+}
+
+#Preview("Row", traits: .sampleData) {
+    @Previewable @Query(sort: \Transaction.date, order: .reverse) var transactions: [Transaction]
+    List(transactions) { transaction in
+        TransactionRowView(transaction: transaction, disableGrouping: false, currency: "USD", upcoming: false, grouping: .day)
     }
 }

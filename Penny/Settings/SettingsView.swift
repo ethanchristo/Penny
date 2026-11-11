@@ -7,12 +7,14 @@
 
 import SwiftUI
 import SwiftData
+import WidgetKit
 
 struct SettingsView: View {
     @AppStorage("currency_code", store: .group) private var currencyCode: String = "USD"
     @AppStorage("currency_symbol", store: .group) private var currencySymbol: String = "$"
     @AppStorage("Home Time Range", store: .group) private var selectedTimeRange: HomeTimeRange = .monthly
     @AppStorage("user_theme") private var currentTheme: AppTheme = .system
+    @AppStorage("week_start", store: .group) private var weekStart: WeekStart = .system
     @AppStorage("user_yellow_threshhold", store: .group) private var yellowThreshold: Double = 100.0
     @AppStorage("savings_total", store: .group) private var savingsTotal: Bool = false
     @AppStorage("pay_period_anchor", store: .group) private var payPeriodAnchor: Double = 0
@@ -70,6 +72,16 @@ struct SettingsView: View {
                     }
                 } label: {
                     Label("Theme", systemImage: "moon")
+                }
+                .foregroundStyle(.primary)
+                .tint(.secondary)
+
+                Picker(selection: $weekStart) {
+                    ForEach(WeekStart.allCases) { option in
+                        Text(option.rawValue).tag(option)
+                    }
+                } label: {
+                    Label("Start of Week", systemImage: "calendar")
                 }
                 .foregroundStyle(.primary)
                 .tint(.secondary)
@@ -187,6 +199,13 @@ struct SettingsView: View {
                     showOnboarding = true
                 }
                 .foregroundStyle(.primary)
+
+                Button("Show Tips Again", systemImage: "lightbulb") {
+                    HomeTour.shared.restart()
+                    // Close Settings so the walkthrough starts on the Overview.
+                    dismiss()
+                }
+                .foregroundStyle(.primary)
             } header: {
                 Text("Other")
             } footer: {
@@ -218,6 +237,10 @@ struct SettingsView: View {
         }
         .onChange(of: currency) {
             saveCurrency()
+        }
+        .onChange(of: weekStart) {
+            // Widgets compute week boundaries too; redraw them with the new start day.
+            WidgetCenter.shared.reloadAllTimelines()
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
@@ -403,5 +426,13 @@ struct SettingsView: View {
         // 4. Update the save indexes to match the new 3-item structure
         currencyCode = currency[1]
         currencySymbol = currency[2]
+    }
+}
+
+// MARK: - Previews
+
+#Preview(traits: .sampleData) {
+    NavigationStack {
+        SettingsView()
     }
 }
